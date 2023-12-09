@@ -15,3 +15,6 @@ class Room:
         self.agent = False
 
         self.visited = False
+
+    def wumpus_hit(self):
+        self.wumpus = False
