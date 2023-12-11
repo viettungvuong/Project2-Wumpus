@@ -1,21 +1,14 @@
-from pyDatalog import pyDatalog
+from sympy import symbols, Function, satisfiable
+from sympy.logic.boolalg import And, Implies, Not, BooleanFunction
 
-pyDatalog.create_terms(
-    "agent",
-    "wumpus",
-    "breeze",
-    "gold",
-    "pit",
-    "stench",
-    "dead",
-    "okay",
-    "action"
-)
+current_agent_x = 0
+current_agent_y = 0
 
-okay(X,Y) <= ~pit(X,Y) & ~wumpus(X,Y) # room is okay
-wumpus(X,Y) <= stench(X,Y) # wumpus is in room
-pit(X,Y) <= breeze(X,Y) # pit is in room
+Wumpus, Breeze, Pit, Stench, Gold, Okay = symbols('Wumpus Breeze Pit Stench Gold Okay', cls=Function)
 
-dead <= ~okay(X,Y) & agent(X,Y) # agent is dead
+# symbol
+Dead = symbols('Dead', boolean=True)
 
-action("move") <= okay(X,Y) & ~dead # agent can move
+okayLogic = Implies(And(Not(Pit(current_agent_x, current_agent_y)), Not(Wumpus(current_agent_x, current_agent_y))), Okay(current_agent_x, current_agent_y))
+
+print(satisfiable(okayLogic))
