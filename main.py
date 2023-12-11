@@ -1,16 +1,25 @@
-# This is a sample Python script.
-
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+from room import Room
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+def read_map(file_name):
+    try:
+        with open(file_name, 'r') as lines:
+            n = int(lines.readline())
+
+            # 2d array representing the map
+            map = [[Room(i, j) for j in range(n)] for i in range(n)]
+
+            for i in range(n):
+                line = lines.readline()
+                line_split = line.split('.')
+                for j in range(n):
+                    map[i][j].set_room(line_split[j])
+
+            return map
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+    except FileNotFoundError:
+        print(f"File '{file_name}' not found.")
+        return None
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+map = read_map("map1.txt")

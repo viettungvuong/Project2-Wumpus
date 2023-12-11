@@ -16,5 +16,19 @@ class Room:
 
         self.visited = False
 
+    def set_room(self, str):
+        if str.__contains__("W"):
+            self.wumpus = True
+        if str.__contains__("G"):
+            self.gold = True
+        if str.__contains__("P"):
+            self.pit = True
+        if str.__contains__("B"):
+            self.breeze = True
+        if str.__contains__("S"):
+            self.stench = True
+        if str.__contains__("A"):
+            self.agent = True
+
     def wumpus_hit(self):
         self.wumpus = False
