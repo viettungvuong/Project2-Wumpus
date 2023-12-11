@@ -1,6 +1,5 @@
 from room import Room
 
-
 def read_map(file_name):
     try:
         with open(file_name, 'r') as lines:
@@ -23,3 +22,4 @@ def read_map(file_name):
         return None
 
 map = read_map("map1.txt")
+pass
