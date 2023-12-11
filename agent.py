@@ -9,6 +9,7 @@ class Direction(Enum):
     LEFT = 3
     RIGHT = 4
     
+# below function return a room that is in the given direction from the current room
 def room_direction(current_room, direction):
     if direction == Direction.FORWARD:
         if current_room.y >= 0:
