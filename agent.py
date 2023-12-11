@@ -32,8 +32,6 @@ def room_direction(current_room, direction):
             return None
 
 class Agent:
-
-
     def __init__(self, current_room):
         self.current_room = current_room
         self.direction = Direction.RIGHT
@@ -48,8 +46,10 @@ class Agent:
         else:
             return
 
-        if self.current_room.breeze or self.current_room.wumpus:
+        if self.current_room.pit or self.current_room.wumpus:
             print("You died!")
+        elif self.current_room.gold:
+            print("You collected gold!")
 
     def shoot(self):
         next_room = room_direction(self.current_room, self.direction)
