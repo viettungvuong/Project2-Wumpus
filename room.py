@@ -18,7 +18,16 @@ class Room:
 
         self.visited = False
 
-        self.surrounding_rooms = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+        self.surrounding_rooms = []
+
+        if x > 0:
+            self.surrounding_rooms.append((x - 1, y))
+        if x < 9:
+            self.surrounding_rooms.append((x + 1, y))
+        if y > 0:
+            self.surrounding_rooms.append((x, y - 1))
+        if y < 9:
+            self.surrounding_rooms.append((x, y + 1))
 
     def set_room(self, str):
         if str.__contains__("W"):
@@ -41,9 +50,17 @@ class Room:
         surrounding_wumpus = [symbols(f"Wumpus({r[0]}, {r[1]})") for r in self.surrounding_rooms]
         return Implies(self.stench, Or(*surrounding_wumpus))
 
+    def no_wumpus(self):
+        surrounding_wumpus = [symbols(f"Wumpus({r[0]}, {r[1]})") for r in self.surrounding_rooms]
+        return Implies(Not(self.stench), And(Not(*surrounding_wumpus)))
+
     def possible_pit(self):
         surrounding_pit = [symbols(f"Pit({r[0]}, {r[1]})") for r in self.surrounding_rooms]
         return Implies(self.breeze, Or(*surrounding_pit))
+
+    def no_pit(self):
+        surrounding_pit = [symbols(f"Pit({r[0]}, {r[1]})") for r in self.surrounding_rooms]
+        return Implies(Not(self.breeze), And(Not(*surrounding_pit)))
 
     def has_wumpus(self):
         surrounding_stench = [symbols(f"Stench({r[0]}, {r[1]})") for r in self.surrounding_rooms]
