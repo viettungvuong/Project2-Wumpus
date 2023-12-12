@@ -1,4 +1,10 @@
+from sympy import Function
+
 from room import Room
+from kb import KB
+
+
+kb = KB()
 
 def read_map(file_name):
     try:
@@ -13,6 +19,9 @@ def read_map(file_name):
                 line_split = line.split('.')
                 for j in range(n):
                     map[i][j].set_room(line_split[j])
+
+                    if line_split[j].__contains__("A"):
+                        kb.add_sentence(Function("Agent")(i, j))
 
             return map
 

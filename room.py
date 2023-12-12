@@ -1,5 +1,7 @@
 from sympy import symbols, Function, satisfiable
 from sympy.logic.boolalg import And, Implies, Not, Or
+import kb
+from logic import modus_ponens
 
 rooms = set()
 
@@ -8,13 +10,13 @@ class Room:
         self.x = x
         self.y = y
 
-        self.wumpus = None
-        self.gold = None
-        self.pit = None
-        self.breeze = None
-        self.stench = None
+        self.wumpus = False
+        self.gold = False
+        self.pit = False
+        self.breeze = False
+        self.stench = False
 
-        self.agent = None # agent currently here
+        self.agent = False
 
         self.visited = False
 
@@ -31,41 +33,37 @@ class Room:
 
     def set_room(self, str):
         if str.__contains__("W"):
-            self.wumpus = symbols(f"Wumpus({self.x}, {self.y})")
+            self.wumpus = True
         if str.__contains__("G"):
-            self.gold = symbols(f"Gold({self.x}, {self.y})")
+            self.gold = True
         if str.__contains__("P"):
-            self.pit = symbols(f"Pit({self.x}, {self.y})")
+            self.pit = True
         if str.__contains__("B"):
-            self.breeze = symbols(f"Breeze({self.x}, {self.y})")
+            self.breeze = True
         if str.__contains__("S"):
-            self.stench = symbols(f"Stench({self.x}, {self.y})")
+            self.stench = True
         if str.__contains__("A"):
-            self.agent = symbols(f"Agent({self.x}, {self.y})")
+            self.agent = True
 
     def wumpus_hit(self):
         self.wumpus = Not(self.wumpus)
 
-    def possible_wumpus(self):
-        surrounding_wumpus = [symbols(f"Wumpus({r[0]}, {r[1]})") for r in self.surrounding_rooms]
-        return Implies(self.stench, Or(*surrounding_wumpus))
+    def check_pit(self):
+        return {kb.pitF.subs({kb.x: self.x, kb.y: self.y}): self.pit}
 
-    def no_wumpus(self):
-        surrounding_wumpus = [symbols(f"Wumpus({r[0]}, {r[1]})") for r in self.surrounding_rooms]
-        return Implies(Not(self.stench), And(Not(*surrounding_wumpus)))
+    def check_wumpus(self):
+        return {kb.wumpusF.subs({kb.x: self.x, kb.y: self.y}): self.wumpus}
 
-    def possible_pit(self):
-        surrounding_pit = [symbols(f"Pit({r[0]}, {r[1]})") for r in self.surrounding_rooms]
-        return Implies(self.breeze, Or(*surrounding_pit))
+    def check_stench(self):
+        return {kb.stenchF.subs({kb.x: self.x, kb.y: self.y}): self.stench}
 
-    def no_pit(self):
-        surrounding_pit = [symbols(f"Pit({r[0]}, {r[1]})") for r in self.surrounding_rooms]
-        return Implies(Not(self.breeze), And(Not(*surrounding_pit)))
+    def check_breeze(self):
+        return {kb.breezeF.subs({kb.x: self.x, kb.y: self.y}): self.breeze}
 
-    def has_wumpus(self):
-        surrounding_stench = [symbols(f"Stench({r[0]}, {r[1]})") for r in self.surrounding_rooms]
-        return Implies(self.wumpus, And(*surrounding_stench))
 
-    def has_pit(self):
-        surrounding_breeze = [symbols(f"Breeze({r[0]}, {r[1]})") for r in self.surrounding_rooms]
-        return Implies(self.wumpus, And(*surrounding_breeze))
+
+room = Room(0, 0)
+# room.set_room("W")
+print(room.check_wumpus())
+
+print(modus_ponens(Implies(kb.breezeF, kb.pitF), kb.breezeF))

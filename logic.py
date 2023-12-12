@@ -1,20 +1,20 @@
-from sympy import Not, Or
+from sympy.logic.boolalg import And, Implies, Not, Or
 
-# A -> B 
+# A -> B
 # A 
 # => B
 def modus_ponens(rule, antecedent):
-    if antecedent in rule.args:
-        return rule.rhs
+    if rule.func==Implies and antecedent == rule.args[0]:
+        return rule.args[1]
+    return None
 
 # A -> B 
 # -B 
 # => -A
 def modus_tollens(rule, negated_consequent):
-    if Not(rule.rhs) == negated_consequent:
-        return Not(rule.lhs)
-
-
+    if rule.func==Implies and Not(rule.args[1]) == negated_consequent:
+        return Not(rule.args[0])
+    return None
 
 def resolution_refutation(clause1, clause2):
     resolved = Or()
