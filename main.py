@@ -1,12 +1,12 @@
 from sympy import Function
 
 from room import Room
-from kb import KB
+from agent import Agent
 
 
-kb = KB()
+agent = None
 
-def read_map(file_name):
+def read_map(file_name, agent):
     try:
         with open(file_name, 'r') as lines:
             n = int(lines.readline())
@@ -21,7 +21,17 @@ def read_map(file_name):
                     map[i][j].set_room(line_split[j])
 
                     if line_split[j].__contains__("A"):
-                        kb.add_sentence(Function("Agent")(i, j))
+                        agent = Agent(map[i][j])
+                    elif line_split[j].__contains__("W"):
+                        moves = [(i - 1, j), (i + 1, j), (i, j - 1), (i, j + 1)]
+                        for move in moves:
+                            if move[0] >= 0 and move[0] < n and move[1] >= 0 and move[1] < n:
+                                map[move[0]][move[1]].set_room("S")
+                    elif line_split[j].__contains__("P"):
+                        moves = [(i - 1, j), (i + 1, j), (i, j - 1), (i, j + 1)]
+                        for move in moves:
+                            if move[0] >= 0 and move[0] < n and move[1] >= 0 and move[1] < n:
+                                map[move[0]][move[1]].set_room("B")
 
             return map
 
@@ -30,5 +40,4 @@ def read_map(file_name):
         print(f"File '{file_name}' not found.")
         return None
 
-map = read_map("map1.txt")
-pass
+map = read_map("map1.txt", agent)
