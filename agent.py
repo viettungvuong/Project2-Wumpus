@@ -42,8 +42,11 @@ class Agent:
         self.kb.add_sentence(f"~W{current_room.x},{current_room.y}")
         self.kb.add_sentence(f"~P{current_room.x},{current_room.y}")
 
-        self.visited_rooms = set()
-        self.unvisited_safe_rooms = set()
+        self.percept() # percept xung quanh
+
+        self.visited_rooms = []
+        self.safe_rooms = set()
+
 
     def moves(self):
         return list(Direction)
@@ -62,7 +65,7 @@ class Agent:
             print("You collected gold!")
 
         self.percept()
-        self.visited_rooms.add(self.current_room)
+        self.visited_rooms.append(self.current_room)
 
     def shoot(self):
         next_room = room_direction(self.current_room, self.direction)
@@ -81,8 +84,8 @@ class Agent:
     def percept(self):
         if self.current_room.breeze: # if breeze
             self.kb.add_sentence(f"B{self.current_room.x},{self.current_room.y}")
-            disjunction_sentences = []
-            disjunction_sentences.append(f"P{r[0]},{r[1]}" for r in self.current_room.surrounding_rooms)
+            disjunction_sentences = set()
+            disjunction_sentences.add(f"P{r[0]},{r[1]}" for r in self.current_room.surrounding_rooms)
             self.kb.add_sentence(disjunction_sentences)
         else: # if not breeze
             self.kb.add_sentence(f"~B{self.current_room.x},{self.current_room.y}")
@@ -90,8 +93,8 @@ class Agent:
 
         if self.current_room.stench: # if stench
             self.kb.add_sentence(f"S{self.current_room.x},{self.current_room.y}")
-            disjunction_sentences = []
-            disjunction_sentences.append(f"W{r[0]},{r[1]}" for r in self.current_room.surrounding_rooms)
+            disjunction_sentences = set()
+            disjunction_sentences.add(f"W{r[0]},{r[1]}" for r in self.current_room.surrounding_rooms)
             self.kb.add_sentence(disjunction_sentences)
         else: # if not stench
             self.kb.add_sentence(f"~S{self.current_room.x},{self.current_room.y}")
@@ -101,12 +104,12 @@ class Agent:
         for r in self.current_room.surrounding_rooms:
             if self.kb.check(f"W({r[0]},{r[1]})") == False and self.kb.check(f"P({r[0]},{r[1]})") == False:
                 if map[r[0]][r[1]] not in self.visited_rooms:
-                   self.unvisited_safe_rooms.add(map[r[0]][r[1]])
+                   self.safe_rooms.add(map[r[0]][r[1]])
 
 
     def move_safe(self):
         for room in self.current_room.surrounding_rooms:
-            if map[room[0]][room[1]] in self.unvisited_safe_rooms:
+            if map[room[0]][room[1]] in self.safe_rooms:
                 if room[0] < self.current_room.x:
                     self.move(Direction.LEFT)
                 elif room[0] > self.current_room.x:
@@ -115,4 +118,6 @@ class Agent:
                     self.move(Direction.FORWARD)
                 elif room[1] > self.current_room.y:
                     self.move(Direction.BACKWARD)
-                self.unvisited_safe_rooms.remove(map[room[0]][room[1]])
+
+    def moves_trace(self):
+        return list(self.visited_rooms)
