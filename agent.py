@@ -99,6 +99,20 @@ class Agent:
 
     def safe_surrounding(self):
         for r in self.current_room.surrounding_rooms:
-            if self.kb.check(f"W({r[0]},{r[1]})") and self.kb.check(f"P({r[0]},{r[1]})"):
+            if self.kb.check(f"W({r[0]},{r[1]})") == False and self.kb.check(f"P({r[0]},{r[1]})") == False:
                 if map[r[0]][r[1]] not in self.visited_rooms:
                    self.unvisited_safe_rooms.add(map[r[0]][r[1]])
+
+
+    def move_safe(self):
+        for room in self.current_room.surrounding_rooms:
+            if map[room[0]][room[1]] in self.unvisited_safe_rooms:
+                if room[0] < self.current_room.x:
+                    self.move(Direction.LEFT)
+                elif room[0] > self.current_room.x:
+                    self.move(Direction.RIGHT)
+                elif room[1] < self.current_room.y:
+                    self.move(Direction.FORWARD)
+                elif room[1] > self.current_room.y:
+                    self.move(Direction.BACKWARD)
+                self.unvisited_safe_rooms.remove(map[room[0]][room[1]])
