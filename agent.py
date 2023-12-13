@@ -1,5 +1,6 @@
 from enum import Enum
 
+from logic import Atomic, Not
 from main import map
 from kb import KB
 
@@ -38,14 +39,15 @@ class Agent:
         self.current_room = current_room
         self.direction = Direction.RIGHT
         self.kb = KB()
-        self.kb.add_sentence(f"A{current_room.x},{current_room.y}")
-        self.kb.add_sentence(f"~W{current_room.x},{current_room.y}")
-        self.kb.add_sentence(f"~P{current_room.x},{current_room.y}")
+        self.kb.add_sentence(Atomic(f"A{current_room.x},{current_room.y}"))
+        self.kb.add_sentence(Not(Atomic(f"W{current_room.x},{current_room.y}")))
+        self.kb.add_sentence(Not(Atomic(f"P{current_room.x},{current_room.y}")))
 
         self.percept() # percept xung quanh
 
         self.visited_rooms = []
         self.safe_rooms = set()
+        self.frontier = []
 
 
     def moves(self):
@@ -58,7 +60,7 @@ class Agent:
         else:
             return
 
-        if self.current_room.pit or self.current_room.wumpus:
+        if self.kb.check(Atomic(f"W{self.current_room.x},{self.current_room.y}")) or self.kb.check(Atomic(f"P{self.current_room.x},{self.current_room.y}")):
             print("You died!")
             return
         elif self.current_room.gold:
@@ -76,48 +78,36 @@ class Agent:
             if map[x][y].wumpus:
                 print("Wumpus screamed!")
                 map[x][y].wumpus = False
-                self.kb.add_sentence(f"~W{x},{y}")
-                self.kb.add_sentence(f"~S{r[0]},{r[1]}" for r in map[x][y].surrounding_rooms)
+                self.kb.remove(Atomic(f"W{x},{y}"))
+                self.kb.remove(Atomic(f"S{r[0]},{r[1]}") for r in map[x][y].surrounding_rooms)
+
+                self.kb.add_sentence(Not(Atomic(f"W{x},{y}")))
+                self.kb.add_sentence(Not(Atomic(f"S{r[0]},{r[1]}")) for r in map[x][y].surrounding_rooms)
             else:
                 print("You missed!")
 
     def percept(self):
-        if self.current_room.breeze: # if breeze
-            self.kb.add_sentence(f"B{self.current_room.x},{self.current_room.y}")
-            disjunction_sentences = set()
-            disjunction_sentences.add(f"P{r[0]},{r[1]}" for r in self.current_room.surrounding_rooms)
-            self.kb.add_sentence(disjunction_sentences)
-        else: # if not breeze
-            self.kb.add_sentence(f"~B{self.current_room.x},{self.current_room.y}")
-            self.kb.add_sentence(f"~P{r[0]},{r[1]}" for r in self.current_room.surrounding_rooms)
+        if self.kb.check(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))): # if not breeze
+            for r in self.current_room.surrounding_rooms:
+                self.kb.add_sentence(Not(Atomic(f"P{r[0]},{r[1]}")))
 
-        if self.current_room.stench: # if stench
-            self.kb.add_sentence(f"S{self.current_room.x},{self.current_room.y}")
-            disjunction_sentences = set()
-            disjunction_sentences.add(f"W{r[0]},{r[1]}" for r in self.current_room.surrounding_rooms)
-            self.kb.add_sentence(disjunction_sentences)
-        else: # if not stench
-            self.kb.add_sentence(f"~S{self.current_room.x},{self.current_room.y}")
-            self.kb.add_sentence(f"~W{r[0]},{r[1]}" for r in self.current_room.surrounding_rooms)
-
-    def safe_surrounding(self):
-        for r in self.current_room.surrounding_rooms:
-            if self.kb.check(f"W({r[0]},{r[1]})") == False and self.kb.check(f"P({r[0]},{r[1]})") == False:
-                if map[r[0]][r[1]] not in self.visited_rooms:
-                   self.safe_rooms.add(map[r[0]][r[1]])
+        if self.kb.check(Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))): # if not stench
+            for r in self.current_room.surrounding_rooms:
+                self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
 
 
-    def move_safe(self):
+    def find_safe(self):
+        for room in self.frontier:
+            check_wumpus = Not(Atomic(f"W{room.x},{room.y}"))
+            check_pit = Not(Atomic(f"P{room.x},{room.y}"))
+            if self.kb.check(check_wumpus) and self.kb.check(check_pit):
+                self.safe_rooms.add(room)
+
+    def expand_room(self):
         for room in self.current_room.surrounding_rooms:
-            if map[room[0]][room[1]] in self.safe_rooms:
-                if room[0] < self.current_room.x:
-                    self.move(Direction.LEFT)
-                elif room[0] > self.current_room.x:
-                    self.move(Direction.RIGHT)
-                elif room[1] < self.current_room.y:
-                    self.move(Direction.FORWARD)
-                elif room[1] > self.current_room.y:
-                    self.move(Direction.BACKWARD)
+            if room[0] < map.n and room[0] >= 0 and room[1] >= 0 and room[1] <= map.n:
+                if room not in self.frontier and room not in self.visited_rooms:
+                    self.frontier.append(room)
 
     def moves_trace(self):
         return list(self.visited_rooms)

@@ -1,16 +1,10 @@
+from logic import Atomic, OR, IFF
+
+
 class Room:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-
-        self.wumpus = False
-        self.gold = False
-        self.pit = False
-        self.breeze = False
-        self.stench = False
-
-        self.agent = False
-
 
         self.surrounding_rooms = []
 
@@ -23,17 +17,27 @@ class Room:
         if y < 9:
             self.surrounding_rooms.append((x, y + 1))
 
-    def set_room(self, str):
-        if str.__contains__("W"):
-            self.wumpus = True
-        if str.__contains__("G"):
-            self.gold = True
-        if str.__contains__("P"):
-            self.pit = True
-        if str.__contains__("B"):
-            self.breeze = True
-        if str.__contains__("S"):
-            self.stench = True
-        if str.__contains__("A"):
-            self.agent = True
+    def relationship(self, kb):
+        # relationship pit breeze
+        left = Atomic(f"B{self.x},{self.y}")
 
+        right = None
+
+        for r in self.surrounding_rooms:
+            if right is None:
+                right = Atomic(f"P{r[0]},{r[1]}")
+            else:
+                right = OR(right, Atomic(f"P{r[0]},{r[1]}"))
+            kb.add_sentence(IFF(left, right))
+
+        # relationship stench wumpus
+        left = Atomic(f"S{self.x},{self.y}")
+
+        right = None
+
+        for r in self.surrounding_rooms:
+            if right is None:
+                right = Atomic(f"W{r[0]},{r[1]}")
+            else:
+                right = OR(right, Atomic(f"w{r[0]},{r[1]}"))
+            kb.add_sentence(IFF(left, right))
