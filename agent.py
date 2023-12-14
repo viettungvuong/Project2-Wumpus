@@ -10,7 +10,8 @@ class Direction(Enum):
     BACKWARD = 2
     LEFT = 3
     RIGHT = 4
-    
+
+
 # below function return a room that is in the given direction from the current room
 def room_direction(current_room, direction):
     if direction == Direction.FORWARD:
@@ -34,21 +35,26 @@ def room_direction(current_room, direction):
         else:
             return None
 
+
 class Agent:
     def __init__(self, current_room):
         self.current_room = current_room
         self.direction = Direction.RIGHT
+
         self.kb = KB()
-        self.kb.add_sentence(Atomic(f"A{current_room.x},{current_room.y}"))
+        # self.kb.add_sentence(Atomic(f"A{current_room.x},{current_room.y}"))
         self.kb.add_sentence(Not(Atomic(f"W{current_room.x},{current_room.y}")))
         self.kb.add_sentence(Not(Atomic(f"P{current_room.x},{current_room.y}")))
 
-        self.percept() # percept xung quanh
+        self.percept()  # percept xung quanh
 
         self.visited_rooms = []
         self.safe_rooms = set()
         self.frontier = []
 
+        self.alive = True
+
+        self.achieved_golds = 0
 
     def moves(self):
         return list(Direction)
@@ -60,11 +66,25 @@ class Agent:
         else:
             return
 
-        if self.kb.check(Atomic(f"W{self.current_room.x},{self.current_room.y}")) or self.kb.check(Atomic(f"P{self.current_room.x},{self.current_room.y}")):
+        if self.kb.check(
+            Atomic(f"W{self.current_room.x},{self.current_room.y}")
+        ) or self.kb.check(Atomic(f"P{self.current_room.x},{self.current_room.y}")):
             print("You died!")
             return
         elif self.current_room.gold:
             print("You collected gold!")
+
+        self.percept()
+        self.visited_rooms.append(self.current_room)
+
+    def move_to(self, next_room):
+        if next_room in self.visited_rooms:
+            return
+
+        if next_room is not None:
+            self.current_room = next_room
+        else:
+            return
 
         self.percept()
         self.visited_rooms.append(self.current_room)
@@ -79,28 +99,45 @@ class Agent:
                 print("Wumpus screamed!")
                 map[x][y].wumpus = False
                 self.kb.remove(Atomic(f"W{x},{y}"))
-                self.kb.remove(Atomic(f"S{r[0]},{r[1]}") for r in map[x][y].surrounding_rooms)
+                self.kb.remove(
+                    Atomic(f"S{r[0]},{r[1]}") for r in map[x][y].surrounding_rooms
+                )
 
                 self.kb.add_sentence(Not(Atomic(f"W{x},{y}")))
-                self.kb.add_sentence(Not(Atomic(f"S{r[0]},{r[1]}")) for r in map[x][y].surrounding_rooms)
+                self.kb.add_sentence(
+                    Not(Atomic(f"S{r[0]},{r[1]}")) for r in map[x][y].surrounding_rooms
+                )
             else:
                 print("You missed!")
 
     def percept(self):
-        if self.kb.check(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))): # if not breeze
+        if self.kb.check(
+            Atomic(f"W{self.current_room.x},{self.current_room.y}")
+        ) or self.kb.check(Atomic(f"P{self.current_room.x},{self.current_room.y}")):
+            self.alive = False
+            return
+
+        if self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}")):
+            self.current_room.gold = False
+            self.achieved_golds += 1
+
+        if self.kb.check(
+            Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
+        ) and self.kb.backward_chaining(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))) == False:  # if not breeze
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"P{r[0]},{r[1]}")))
 
-        if self.kb.check(Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))): # if not stench
+        if self.kb.check(
+            Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
+        ) and self.kb.backward_chaining(Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))) == False:  # if not stench
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
-
 
     def find_safe(self):
         for room in self.frontier:
             check_wumpus = Not(Atomic(f"W{room.x},{room.y}"))
             check_pit = Not(Atomic(f"P{room.x},{room.y}"))
-            if self.kb.check(check_wumpus) and self.kb.check(check_pit):
+            if self.kb.check(check_wumpus) and self.kb.check(check_pit) and self.kb.backward_chaining(check_wumpus) == False and self.kb.backward_chaining(check_pit) == False:
                 self.safe_rooms.add(room)
 
     def expand_room(self):
@@ -111,3 +148,17 @@ class Agent:
 
     def moves_trace(self):
         return list(self.visited_rooms)
+
+    def turn_based_play(self):
+        while self.alive:
+            self.percept()
+            if self.alive == False:
+                break
+
+            self.find_safe()
+
+            if len(self.safe_rooms) > 0:
+                self.move_to(self.safe_rooms.pop(0)) # vao safe room
+            
+            else:
+                # vao mot phong torng frontier
