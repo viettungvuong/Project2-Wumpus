@@ -40,6 +40,7 @@ class Agent:
     def __init__(self, current_room):
         self.current_room = current_room
         self.direction = Direction.RIGHT
+        self.points = 0
 
         self.kb = KB()
         # self.kb.add_sentence(Atomic(f"A{current_room.x},{current_room.y}"))
@@ -74,7 +75,9 @@ class Agent:
         elif self.current_room.gold:
             print("You collected gold!")
 
+        self.points -= 10
         self.percept()
+        self.expand_room()
         self.visited_rooms.append(self.current_room)
 
     def move_to(self, next_room):
@@ -86,13 +89,16 @@ class Agent:
         else:
             return
 
+        self.points -= 10
         self.percept()
+        self.expand_room()
         self.visited_rooms.append(self.current_room)
 
     def shoot(self):
         next_room = room_direction(self.current_room, self.direction)
 
         if next_room is not None:
+            self.points -= 100
             x = next_room.x
             y = next_room.y
             if map[x][y].wumpus:
@@ -114,22 +120,31 @@ class Agent:
         if self.kb.check(
             Atomic(f"W{self.current_room.x},{self.current_room.y}")
         ) or self.kb.check(Atomic(f"P{self.current_room.x},{self.current_room.y}")):
+            self.points -= 10000
             self.alive = False
             return
 
         if self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}")):
-            self.current_room.gold = False
+            self.points += 10000
             self.achieved_golds += 1
 
-        if self.kb.check(
-            Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
-        ) and self.kb.backward_chaining(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))) == False:  # if not breeze
+        if (
+            self.kb.check(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}")))
+            and self.kb.backward_chaining(
+                Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
+            )
+            == False
+        ):  # if not breeze
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"P{r[0]},{r[1]}")))
 
-        if self.kb.check(
-            Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
-        ) and self.kb.backward_chaining(Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))) == False:  # if not stench
+        if (
+            self.kb.check(Not(Atomic(f"S{self.current_room.x},{self.current_room.y}")))
+            and self.kb.backward_chaining(
+                Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
+            )
+            == False
+        ):  # if not stench
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
 
@@ -137,7 +152,12 @@ class Agent:
         for room in self.frontier:
             check_wumpus = Not(Atomic(f"W{room.x},{room.y}"))
             check_pit = Not(Atomic(f"P{room.x},{room.y}"))
-            if self.kb.check(check_wumpus) and self.kb.check(check_pit) and self.kb.backward_chaining(check_wumpus) == False and self.kb.backward_chaining(check_pit) == False:
+            if (
+                self.kb.check(check_wumpus)
+                and self.kb.check(check_pit)
+                and self.kb.backward_chaining(check_wumpus) == False
+                and self.kb.backward_chaining(check_pit) == False
+            ):
                 self.safe_rooms.add(room)
 
     def expand_room(self):
@@ -149,7 +169,7 @@ class Agent:
     def moves_trace(self):
         return list(self.visited_rooms)
 
-    def turn_based_play(self):
+    def solve(self):
         while self.alive:
             self.percept()
             if self.alive == False:
@@ -158,7 +178,16 @@ class Agent:
             self.find_safe()
 
             if len(self.safe_rooms) > 0:
-                self.move_to(self.safe_rooms.pop(0)) # vao safe room
-            
+                self.move_to(self.safe_rooms.pop(0))  # vao safe room
+
             else:
                 # vao mot phong torng frontier
+                # shoot wumpus
+                for r in self.current_room.surrounding_rooms:
+                    if (
+                        self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
+                        or self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
+                    ):
+                        self.shoot()  # shoot wumpus
+                        self.move_to(map[r[0]][r[1]])  # vao phong do
+                        break
