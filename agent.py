@@ -51,7 +51,7 @@ class Agent:
 
         self.visited_rooms = []
         self.safe_rooms = set()
-        self.frontier = []
+        self.frontier = set()
 
         self.alive = True
 
@@ -89,7 +89,7 @@ class Agent:
         else:
             return
 
-        self.points -= 10
+        # self.points -= 10
         self.percept()
         self.expand_room()
         self.visited_rooms.append(self.current_room)
@@ -161,10 +161,15 @@ class Agent:
                 self.safe_rooms.add(room)
 
     def expand_room(self):
-        for room in self.current_room.surrounding_rooms:
-            if room[0] < map.n and room[0] >= 0 and room[1] >= 0 and room[1] <= map.n:
-                if room not in self.frontier and room not in self.visited_rooms:
-                    self.frontier.append(room)
+        for room in self.visited_rooms:
+            for r in room.surrounding_rooms:
+                considering_room = map[r[0]][r[1]]
+                if (
+                    considering_room not in self.visited_rooms
+                    and considering_room not in self.frontier
+                ):
+                    # thêm một cái giống node, lưu lại phòng trc của considering room (là room) để ta truy path
+                    self.frontier.add(considering_room)
 
     def moves_trace(self):
         return list(self.visited_rooms)
