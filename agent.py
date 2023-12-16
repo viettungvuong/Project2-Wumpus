@@ -1,8 +1,9 @@
 from enum import Enum
-
 from logic import Atomic, Not
-from main import map
+from room import Room
 from kb import KB
+
+import math
 
 
 class Direction(Enum):
@@ -12,8 +13,64 @@ class Direction(Enum):
     RIGHT = 4
 
 
+class Map:
+    def __init__(self):
+        self.map = [[Room(i, j) for j in range(10)] for i in range(10)]
+        self.n = 0
+
+    def get_room(self, x, y):
+        return self.map[x][y]
+
+    def gold_heuristic(self, current_room, goal_room):
+        return math.sqrt(
+            (current_room.x - goal_room.x) ** 2 + (current_room.y - goal_room.y) ** 2
+        )
+        # euclidean distance
+
+    def read_map(self, file_name):
+        try:
+            with open(file_name, "r") as lines:
+                n = int(lines.readline())
+                self.n = n
+
+                # 2d array representing the self.map
+                self.map = [[Room(i, j) for j in range(n)] for i in range(n)]
+                agent = None
+                kb = KB()
+
+                for i in range(n):
+                    line = lines.readline()
+                    line_split = line.split(".")
+                    for j in range(n):
+                        if line_split[j].__contains__("A"):
+                            agent = Agent(self.map[i][j])
+
+                        elif line_split[j].__contains__("G"):
+                            kb.add_sentence(Atomic(f"G{i},{j}"))
+
+                        elif line_split[j].__contains__("W"):  # meet wumpus
+                            kb.add_sentence(Atomic(f"W{i},{j}"))
+                            moves = self.map[i][j].surrounding_rooms
+                            for move in moves:
+                                kb.add_sentence(Atomic(f"S{move[0]},{move[1]}"))
+
+                        elif line_split[j].__contains__("P"):
+                            kb.add_sentence(Atomic(f"P{i},{j}"))
+                            moves = self.map[i][j].surrounding_rooms
+                            for move in moves:
+                                kb.add_sentence(Atomic(f"B{move[0]},{move[1]}"))
+
+                print(kb)
+                agent.kb = kb
+                return agent
+
+        except FileNotFoundError:
+            print(f"File '{file_name}' not found.")
+            return None
+
+
 # below function return a room that is in the given direction from the current room
-def room_direction(current_room, direction):
+def room_direction(map, current_room, direction):
     if direction == Direction.FORWARD:
         if current_room.y >= 0:
             return map[current_room.x][current_room.y - 1]
@@ -38,7 +95,7 @@ def room_direction(current_room, direction):
 
 class Agent:
     def __init__(self, current_room):
-        self.current_room = current_room
+        self.current_room = None
         self.direction = Direction.RIGHT
         self.points = 0
 
@@ -47,8 +104,6 @@ class Agent:
         self.kb.add_sentence(Not(Atomic(f"W{current_room.x},{current_room.y}")))
         self.kb.add_sentence(Not(Atomic(f"P{current_room.x},{current_room.y}")))
 
-        self.percept()  # percept xung quanh
-
         self.visited_rooms = []
         self.safe_rooms = set()
         self.frontier = set()
@@ -56,6 +111,8 @@ class Agent:
         self.alive = True
 
         self.achieved_golds = 0
+
+        self.move_to(current_room)
 
     def moves(self):
         return list(Direction)
@@ -94,24 +151,25 @@ class Agent:
         self.expand_room()
         self.visited_rooms.append(self.current_room)
 
-    def shoot(self):
-        next_room = room_direction(self.current_room, self.direction)
+    def shoot(self, next_room):
+        # next_room = room_direction(self.current_room, self.direction)
 
         if next_room is not None:
             self.points -= 100
             x = next_room.x
             y = next_room.y
-            if map[x][y].wumpus:
+            if self.kb.check(Atomic(f"W{x},{y}")) == True:
                 print("Wumpus screamed!")
-                map[x][y].wumpus = False
                 self.kb.remove(Atomic(f"W{x},{y}"))
                 self.kb.remove(
-                    Atomic(f"S{r[0]},{r[1]}") for r in map[x][y].surrounding_rooms
+                    Atomic(f"S{r[0]},{r[1]}")
+                    for r in map.get_room(x, y).surrounding_rooms
                 )
 
                 self.kb.add_sentence(Not(Atomic(f"W{x},{y}")))
                 self.kb.add_sentence(
-                    Not(Atomic(f"S{r[0]},{r[1]}")) for r in map[x][y].surrounding_rooms
+                    Not(Atomic(f"S{r[0]},{r[1]}"))
+                    for r in map.get_room(x, y).surrounding_rooms
                 )
             else:
                 print("You missed!")
@@ -127,6 +185,7 @@ class Agent:
         if self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}")):
             self.points += 10000
             self.achieved_golds += 1
+            print(f"You collected gold at {self.current_room.x},{self.current_room.y}")
 
         if (
             self.kb.check(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}")))
@@ -148,13 +207,15 @@ class Agent:
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
 
+        map.get_room(self.current_room.x, self.current_room.y).relationship(self.kb)
+
     def find_safe(self):
         for room in self.frontier:
             check_wumpus = Not(Atomic(f"W{room.x},{room.y}"))
             check_pit = Not(Atomic(f"P{room.x},{room.y}"))
             if (
-                self.kb.check(check_wumpus)
-                and self.kb.check(check_pit)
+                self.kb.check(check_wumpus) == False
+                and self.kb.check(check_pit) == False
                 and self.kb.backward_chaining(check_wumpus) == False
                 and self.kb.backward_chaining(check_pit) == False
             ):
@@ -163,7 +224,7 @@ class Agent:
     def expand_room(self):
         for room in self.visited_rooms:
             for r in room.surrounding_rooms:
-                considering_room = map[r[0]][r[1]]
+                considering_room = map.get_room(r[0], r[1])
                 if (
                     considering_room not in self.visited_rooms
                     and considering_room not in self.frontier
@@ -176,7 +237,7 @@ class Agent:
 
     def solve(self):
         while self.alive:
-            self.percept()
+            print(f"Agent is at {self.current_room.x},{self.current_room.y}")
             if self.alive == False:
                 break
 
@@ -186,13 +247,26 @@ class Agent:
                 self.move_to(self.safe_rooms.pop(0))  # vao safe room
 
             else:
-                # vao mot phong torng frontier
-                # shoot wumpus
                 for r in self.current_room.surrounding_rooms:
                     if (
                         self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
                         or self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
                     ):
-                        self.shoot()  # shoot wumpus
-                        self.move_to(map[r[0]][r[1]])  # vao phong do
+                        self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
+                        print(f"Shoot wumpus at, {r[0]}, {r[1]})")
+
+                    if (
+                        self.kb.check(Atomic(f"P{r[0]},{r[1]}")) == False
+                        and self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}"))
+                        == False
+                    ):
+                        if map.get_room(r[0], r[1]) in self.visited_rooms:
+                            continue
+                        self.move_to(map.get_room(r[0], r[1]))  # vao phong do
                         break
+
+
+map = Map()
+agent = map.read_map("map1.txt")
+if agent is not None:
+    agent.solve()

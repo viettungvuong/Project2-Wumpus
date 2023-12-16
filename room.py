@@ -17,6 +17,9 @@ class Room:
         if y < 9:
             self.surrounding_rooms.append((x, y + 1))
 
+    def __str__(self):
+        return f"({self.x},{self.y})"
+
     def relationship(self, kb):
         # relationship pit breeze
         left = Atomic(f"B{self.x},{self.y}")

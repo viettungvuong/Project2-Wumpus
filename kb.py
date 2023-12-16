@@ -9,13 +9,12 @@ class KB:
         self.sentences.append(sentence)
 
     def remove(self, sentence):
-        self.sentences.remove(sentence)
+        for s in self.sentences:
+            if str(s) == str(sentence):
+                self.sentences.remove(s)
 
-    def __str__(self):
-        return str(self.sentences)
-
-    def check(self, sentence): # check if sentence is in KB
-        return sentence in self.sentences
+    def check(self, sentence):  # check if sentence is in KB
+        return str(sentence) in [str(s) for s in self.sentences]
 
     def toCnf(self):
         result = []
@@ -24,7 +23,6 @@ class KB:
         return result
 
     def backward_chaining(self, q):
-
         if q in self.sentences:
             return True
 
@@ -41,7 +39,9 @@ class KB:
             if isinstance(sentence, If):
                 if sentence.left == q:
                     return self.backward_chaining(sentence.right)
-                elif sentence.right == q: # nếu trong câu implies mà q nằm ở vế phải (được suy ra)
+                elif (
+                    sentence.right == q
+                ):  # nếu trong câu implies mà q nằm ở vế phải (được suy ra)
                     return self.backward_chaining(sentence.left)
 
             elif isinstance(sentence, Iff):
@@ -72,14 +72,16 @@ class KB:
             return res
 
         clauses = self.toCnf()
-        clauses.append(Not(alpha).toCNF()) # add not alpha to clauses
+        clauses.append(Not(alpha).toCNF())  # add not alpha to clauses
 
         new = set()
         while True:
             n = len(clauses)
-            pairs = [(clauses[i], clauses[j]) for i in range(n) for j in range(i + 1, n)] # traverse through pairs of clauses
+            pairs = [
+                (clauses[i], clauses[j]) for i in range(n) for j in range(i + 1, n)
+            ]  # traverse through pairs of clauses
 
-            for (clauseA, clauseB) in pairs:
+            for clauseA, clauseB in pairs:
                 clauses_fromA = disjunction_clauses(clauseA)
                 clauses_fromB = disjunction_clauses(clauseB)
 
@@ -88,10 +90,14 @@ class KB:
 
                 for cA in clauses_fromA:
                     for cB in clauses_fromB:
-                        if cA == Not(cB) or Not(cA) == cB: # if cA and cB are opposite
+                        if cA == Not(cB) or Not(cA) == cB:  # if cA and cB are opposite
                             clauses.remove(clauseA)
                             clauses.remove(clauseB)
-                            resolvents = [c for c in clauses_fromA + clauses_fromB if c != cA and c != cB]
+                            resolvents = [
+                                c
+                                for c in clauses_fromA + clauses_fromB
+                                if c != cA and c != cB
+                            ]
                             new_clause = None
                             for r in resolvents:
                                 if new_clause is None:
@@ -102,5 +108,5 @@ class KB:
                             clauses.append(new_clause)
 
             if len(clauses) == 0 or clauses[0] is None:
-                return True # satisfiable
+                return True  # satisfiable
             return False
