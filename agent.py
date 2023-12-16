@@ -274,8 +274,11 @@ class Agent:
                         self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
                         or self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
                     ):
-                        self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
-                        print(f"Shoot wumpus at ({r[0]}, {r[1]})")
+                        if len(self.frontier) == 1:
+                            self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
+                            print(f"Shoot wumpus at ({r[0]}, {r[1]})")
+                        else:
+                            continue
 
                     if map.get_room(r[0], r[1]) in self.visited_rooms:
                         continue
@@ -316,23 +319,45 @@ class Agent:
                     self.frontier,
                     key=lambda x: map.gold_heuristic(
                         x, map.get_room(0, 0)
-                    ),  # nhớ chỉnh index để 0, 0 thành 1, 1
+                    ),  # nhớ chỉnh index để 0, 0 thành 1, 1 theo đúng bài
                 )
 
                 # check wumpus pit
-                room = self.frontier[0]
+                index_pop = 0
+                room = self.frontier[index_pop]
                 r = (room.x, room.y)
 
                 if (
                     self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
                     or self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
-                ):
-                    self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
-                    print(f"Shoot wumpus at ({r[0]}, {r[1]})")
+                ):  # chỉ nên shoot khi len = 1
+                    if len(self.frontier) == 1:
+                        self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
+                        print(f"Shoot wumpus at ({r[0]}, {r[1]})")
+                    else:
+                        for i in range(1, len(self.frontier)):
+                            r = (self.frontier[i].x, self.frontier[i].y)
+                            if (
+                                self.kb.check(Atomic(f"W{r[0]},{r[1]}")) == False
+                                and self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}"))
+                                == False
+                            ):
+                                index_pop = i
+                                break
 
                 if map.get_room(r[0], r[1]) in self.visited_rooms:
-                    continue
-                next_room = self.frontier.pop(0)
+                    for i in range(index_pop, len(self.frontier)):
+                        r = (self.frontier[i].x, self.frontier[i].y)
+                        if (
+                            self.kb.check(Atomic(f"W{r[0]},{r[1]}")) == False
+                            and self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}"))
+                            == False
+                            and map.get_room(r[0], r[1]) not in self.visited_rooms
+                        ):
+                            index_pop = i
+                            break
+
+                next_room = self.frontier.pop(index_pop)
 
             self.move_to(next_room)
 
