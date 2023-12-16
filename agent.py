@@ -105,7 +105,7 @@ class Agent:
 
         self.visited_rooms = []
         self.safe_rooms = set()
-        self.frontier = set()
+        self.frontier = []
 
         self.alive = True
 
@@ -227,9 +227,11 @@ class Agent:
             if (
                 considering_room not in self.visited_rooms
                 and considering_room not in self.frontier
+                and self.kb.check(Atomic(f"P{r[0]},{r[1]}")) == False
+                and self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}")) == False
             ):
                 # thêm một cái giống node, lưu lại phòng trc của considering room (là room) để ta truy path
-                self.frontier.add(considering_room)
+                self.frontier.append(considering_room)
 
     def moves_trace(self):
         return list(self.visited_rooms)
@@ -275,49 +277,67 @@ class Agent:
                         self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
                         print(f"Shoot wumpus at ({r[0]}, {r[1]})")
 
-                    if (
-                        self.kb.check(Atomic(f"P{r[0]},{r[1]}")) == False
-                        and self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}"))
-                        == False
-                    ):
-                        if map.get_room(r[0], r[1]) in self.visited_rooms:
-                            continue
-                        next_room = map.get_room(r[0], r[1])
-                        break
+                    if map.get_room(r[0], r[1]) in self.visited_rooms:
+                        continue
+                    next_room = map.get_room(r[0], r[1])
+                    break
 
             if next_room is None:
+                self.exit_cave()
                 break
 
             self.move_to(next_room)
 
         print(f"Final points: {self.points}")
 
-        def exit_cave(self):
-            # search from current room to the cave
-            self.visited.clear()
-            self.frontier.clear()
+    def exit_cave(self):
+        # search from current room to the cave
 
-            self.move_to(self.current_room)
-            self.find_safe()
+        self.visited_rooms.clear()
+        self.frontier.clear()
 
+        self.move_to(self.current_room)
+        self.find_safe()
+
+        print("Finding cave...")
+
+        while self.current_room.x != 0 or self.current_room.y != 0:
+            print(f"Agent is at {self.current_room.x},{self.current_room.y}")
             if len(self.safe_rooms) > 0:
                 self.safe_rooms = sorted(
                     self.safe_rooms,
-                    key=lambda x: x.gold_heuristic(
-                        map.get_room(0, 0)
+                    key=lambda x: map.gold_heuristic(
+                        x, map.get_room(0, 0)
                     ),  # nhớ chỉnh index để 0, 0 thành 1, 1
                 )
                 next_room = self.safe_rooms.pop(0)
             else:
                 self.frontier = sorted(
                     self.frontier,
-                    key=lambda x: x.gold_heuristic(
-                        map.get_room(0, 0)
+                    key=lambda x: map.gold_heuristic(
+                        x, map.get_room(0, 0)
                     ),  # nhớ chỉnh index để 0, 0 thành 1, 1
                 )
+
+                # check wumpus pit
+                room = self.frontier[0]
+                r = (room.x, room.y)
+
+                if (
+                    self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
+                    or self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
+                ):
+                    self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
+                    print(f"Shoot wumpus at ({r[0]}, {r[1]})")
+
+                if map.get_room(r[0], r[1]) in self.visited_rooms:
+                    continue
                 next_room = self.frontier.pop(0)
 
             self.move_to(next_room)
+
+        self.points += 10
+        print(f"Exit cave successfully")
 
 
 map = Map()
