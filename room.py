@@ -6,6 +6,8 @@ class Room:
         self.x = x
         self.y = y
 
+        self.parent = None
+
         self.surrounding_rooms = []
 
         if x > 0:
@@ -19,6 +21,12 @@ class Room:
 
     def __str__(self):
         return f"({self.x},{self.y})"
+
+    def __eq__(self, __value: object) -> bool:
+        return self.x == __value.x and self.y == __value.y
+
+    def __hash__(self) -> int:
+        return hash((self.x, self.y))
 
     def relationship(self, kb):
         # relationship pit breeze

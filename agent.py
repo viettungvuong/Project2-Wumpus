@@ -4,6 +4,7 @@ from room import Room
 from kb import KB
 
 import math
+import copy
 
 
 class Direction(Enum):
@@ -186,6 +187,7 @@ class Agent:
             self.points += 10000
             self.achieved_golds += 1
             print(f"You collected gold at {self.current_room.x},{self.current_room.y}")
+            self.frontier.clear()
 
         if (
             self.kb.check(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}")))
@@ -209,6 +211,21 @@ class Agent:
 
         map.get_room(self.current_room.x, self.current_room.y).relationship(self.kb)
 
+    def expand_room(self, current_room):
+        for r in current_room.surrounding_rooms:
+            considering_room = copy.copy(
+                map.get_room(r[0], r[1])
+            )  # phải làm sao để mỗi thằng là một bản khác chứ không phải là reference tới thằng này
+            if (
+                considering_room not in self.visited_rooms
+                and considering_room not in self.frontier
+                and self.kb.check(Atomic(f"P{r[0]},{r[1]}")) == False
+                and self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}")) == False
+            ):
+                # thêm một cái giống node, lưu lại phòng trc của considering room (là room) để ta truy path
+                considering_room.parent = current_room
+                self.frontier.append(considering_room)
+
     def find_safe(self):
         for room in self.frontier:
             check_wumpus = Not(Atomic(f"W{room.x},{room.y}"))
@@ -221,25 +238,19 @@ class Agent:
             ):
                 self.safe_rooms.add(room)
 
-    def expand_room(self, current_room):
-        for r in current_room.surrounding_rooms:
-            considering_room = map.get_room(r[0], r[1])
-            if (
-                considering_room not in self.visited_rooms
-                and considering_room not in self.frontier
-                and self.kb.check(Atomic(f"P{r[0]},{r[1]}")) == False
-                and self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}")) == False
-            ):
-                # thêm một cái giống node, lưu lại phòng trc của considering room (là room) để ta truy path
-                self.frontier.append(considering_room)
+    def moves_trace(self, final_room):
+        current = final_room
+        path = []
+        while current is not None:
+            path.append(current)
+            # print(f"{current.x},{current.y}")
+            current = current.parent
 
-    def moves_trace(self):
-        return list(self.visited_rooms)
+        return path
 
     def solve(self):
         while self.alive:
             # nếu bị loop phòng (hai lần liên tiếp đều là 1 phòng) thì tìm đường ra cave
-            print(f"Agent is at {self.current_room.x},{self.current_room.y}")
             if self.alive == False:
                 break
 
@@ -280,13 +291,17 @@ class Agent:
                         else:
                             continue
 
-                    if map.get_room(r[0], r[1]) in self.visited_rooms:
+                    if room in self.visited_rooms:
                         continue
-                    next_room = map.get_room(r[0], r[1])
+                    next_room = room  # có thể là do cái này đang là map.get_room (là một object hoàn toàn khác) thay vì lấy từ frontier
                     break
 
-            if next_room is None:
-                self.exit_cave()
+            if next_room is None:  # xong hết rồi
+                goal_room = self.exit_cave()
+                moves = self.moves_trace(goal_room)
+                while len(moves) > 0:
+                    move = moves.pop(-1)
+                    print(f"{move.x},{move.y}")
                 break
 
             self.move_to(next_room)
@@ -295,6 +310,7 @@ class Agent:
 
     def exit_cave(self):
         # search from current room to the cave
+        current_room = None
 
         self.visited_rooms.clear()
         self.frontier.clear()
@@ -302,10 +318,9 @@ class Agent:
         self.move_to(self.current_room)
         self.find_safe()
 
-        print("Finding cave...")
+        print("Finding cave exit...")
 
-        while self.current_room.x != 0 or self.current_room.y != 0:
-            print(f"Agent is at {self.current_room.x},{self.current_room.y}")
+        while not (self.current_room.x == 0 and self.current_room.y == 0):
             if len(self.safe_rooms) > 0:
                 self.safe_rooms = sorted(
                     self.safe_rooms,
@@ -314,6 +329,7 @@ class Agent:
                     ),  # nhớ chỉnh index để 0, 0 thành 1, 1
                 )
                 next_room = self.safe_rooms.pop(0)
+
             else:
                 self.frontier = sorted(
                     self.frontier,
@@ -324,6 +340,10 @@ class Agent:
 
                 # check wumpus pit
                 index_pop = 0
+
+                if len(self.frontier) == 0:
+                    break
+
                 room = self.frontier[index_pop]
                 r = (room.x, room.y)
 
@@ -336,7 +356,8 @@ class Agent:
                         print(f"Shoot wumpus at ({r[0]}, {r[1]})")
                     else:
                         for i in range(1, len(self.frontier)):
-                            r = (self.frontier[i].x, self.frontier[i].y)
+                            room = self.frontier[i]
+                            r = (room.x, room.y)
                             if (
                                 self.kb.check(Atomic(f"W{r[0]},{r[1]}")) == False
                                 and self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}"))
@@ -347,7 +368,8 @@ class Agent:
 
                 if map.get_room(r[0], r[1]) in self.visited_rooms:
                     for i in range(index_pop, len(self.frontier)):
-                        r = (self.frontier[i].x, self.frontier[i].y)
+                        room = self.frontier[i]
+                        r = (room.x, room.y)
                         if (
                             self.kb.check(Atomic(f"W{r[0]},{r[1]}")) == False
                             and self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}"))
@@ -359,10 +381,12 @@ class Agent:
 
                 next_room = self.frontier.pop(index_pop)
 
+            current_room = next_room
             self.move_to(next_room)
 
         self.points += 10
         print(f"Exit cave successfully")
+        return current_room
 
 
 map = Map()
