@@ -150,8 +150,8 @@ class Agent:
 
         # self.points -= 10
         self.percept()
-        self.expand_room(self.current_room)
-        self.visited_rooms.append(self.current_room)
+        self.expand_room(next_room)
+        self.visited_rooms.append(next_room)
 
     def shoot(self, next_room):
         # next_room = room_direction(self.current_room, self.direction)
@@ -320,8 +320,8 @@ class Agent:
 
                     if room in self.visited_rooms:
                         continue
+
                     next_room = room
-                    self.frontier.remove(room)
                     break
 
             if next_room is None:  # xong hết rồi
@@ -339,20 +339,24 @@ class Agent:
 
     def exit_cave(self):
         # search from current room to the cave
-        current_room = None
+        current_room = self.current_room
 
         self.visited_rooms.clear()
-        # self.frontier.clear()
+        self.frontier.clear()
 
         self.move_to(self.current_room)
         self.find_safe()
 
         print("Finding cave exit...")
 
-        while not (self.current_room.x == 0 and self.current_room.y == 0):
-            print(
-                f"Current room: {self.current_room} - Parent room: {self.current_room.parent is not None and self.current_room.parent}"
-            )
+        while current_room is None or not (current_room.x == 0 and current_room.y == 0):
+            if current_room is not None:
+                print(
+                    f"Current room: {current_room} - Parent room: {current_room.parent is not None and current_room.parent}"
+                )
+
+            next_room = None
+
             if len(self.safe_rooms) > 0:
                 self.safe_rooms = sorted(
                     self.safe_rooms,
@@ -360,6 +364,7 @@ class Agent:
                         x, map.get_room(0, 0)
                     ),  # nhớ chỉnh index để 0, 0 thành 1, 1
                 )
+
                 next_room = self.safe_rooms.pop(0)
 
             else:
@@ -383,38 +388,21 @@ class Agent:
                     self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
                     or self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
                 ):  # chỉ nên shoot khi len = 1
-                    if len(self.frontier) == 1:
-                        self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
-                        print(f"Shoot wumpus at ({r[0]}, {r[1]})")
-                    else:
-                        for i in range(1, len(self.frontier)):
-                            room = self.frontier[i]
-                            r = (room.x, room.y)
-                            if (
-                                self.kb.check(Atomic(f"W{r[0]},{r[1]}")) == False
-                                and self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}"))
-                                == False
-                            ):
-                                index_pop = i
-                                break
+                    self.shoot(self.frontier[index_pop])  # shoot wumpus
+                    print(f"Shoot wumpus at ({r[0]}, {r[1]})")
 
-                if map.get_room(r[0], r[1]) in self.visited_rooms:
-                    for i in range(index_pop, len(self.frontier)):
-                        room = self.frontier[i]
-                        r = (room.x, room.y)
-                        if (
-                            self.kb.check(Atomic(f"W{r[0]},{r[1]}")) == False
-                            and self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}"))
-                            == False
-                            and map.get_room(r[0], r[1]) not in self.visited_rooms
-                        ):
-                            index_pop = i
-                            break
+                if next_room is None:
+                    next_room = self.frontier.pop(index_pop)
+                else:
+                    if map.gold_heuristic(
+                        self.frontier[index_pop], map.get_room(0, 0)
+                    ) < map.gold_heuristic(next_room, map.get_room(0, 0)):
+                        next_room = self.frontier.pop(index_pop)
+                # print(f"Chosen room: {next_room}")
+                # print(f"Visited: {next_room in self.visited_rooms}")
 
-                next_room = self.frontier.pop(index_pop)
-
-            current_room = next_room
-            self.move_to(next_room)
+            current_room = copy.copy(next_room)
+            self.move_to(current_room)
 
         self.points += 10
         print(f"Exit cave successfully")
