@@ -243,7 +243,6 @@ class Agent:
         path = []
         while current is not None:
             path.append(current)
-            # print(f"{current.x},{current.y}")
             current = current.parent
 
         return path
@@ -251,6 +250,7 @@ class Agent:
     def solve(self):
         while self.alive:
             # nếu bị loop phòng (hai lần liên tiếp đều là 1 phòng) thì tìm đường ra cave
+            print(f"Current rooom: {self.current_room}")
             if self.alive == False:
                 break
 
@@ -293,15 +293,16 @@ class Agent:
 
                     if room in self.visited_rooms:
                         continue
-                    next_room = room  # có thể là do cái này đang là map.get_room (là một object hoàn toàn khác) thay vì lấy từ frontier
+                    next_room = room
+                    self.frontier.remove(room)
                     break
 
             if next_room is None:  # xong hết rồi
                 goal_room = self.exit_cave()
-                moves = self.moves_trace(goal_room)
-                while len(moves) > 0:
-                    move = moves.pop(-1)
-                    print(f"{move.x},{move.y}")
+                # moves = self.moves_trace(goal_room)
+                # while len(moves) > 0:
+                #     move = moves.pop(-1)
+                #     print(f"{move.x},{move.y}")
                 break
 
             self.move_to(next_room)
@@ -313,7 +314,7 @@ class Agent:
         current_room = None
 
         self.visited_rooms.clear()
-        self.frontier.clear()
+        # self.frontier.clear()
 
         self.move_to(self.current_room)
         self.find_safe()
@@ -321,6 +322,7 @@ class Agent:
         print("Finding cave exit...")
 
         while not (self.current_room.x == 0 and self.current_room.y == 0):
+            print(f"Current room: {self.current_room}")
             if len(self.safe_rooms) > 0:
                 self.safe_rooms = sorted(
                     self.safe_rooms,
