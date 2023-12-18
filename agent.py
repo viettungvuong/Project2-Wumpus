@@ -187,7 +187,6 @@ class Agent:
             self.points += 10000
             self.achieved_golds += 1
             print(f"You collected gold at {self.current_room.x},{self.current_room.y}")
-            self.frontier.clear()
 
         if (
             self.kb.check(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}")))
