@@ -422,6 +422,6 @@ class Agent:
 
 
 map = Map()
-agent = map.read_map("map1.txt")
+agent = map.read_map("map2.txt")
 if agent is not None:
     agent.solve()
