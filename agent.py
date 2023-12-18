@@ -186,6 +186,7 @@ class Agent:
         if self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}")):
             self.points += 10000
             self.achieved_golds += 1
+            self.kb.remove(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
             print(f"You collected gold at {self.current_room.x},{self.current_room.y}")
 
         if (
