@@ -2,9 +2,10 @@ from logic import Atomic, OR, IFF
 
 
 class Room:
-    def __init__(self, x, y):
+    def __init__(self, x, y, n):
         self.x = x
         self.y = y
+        self.n = n
 
         self.parent = None
 
@@ -12,11 +13,11 @@ class Room:
 
         if x > 0:
             self.surrounding_rooms.append((x - 1, y))
-        if x < 9:
+        if x < n - 1:
             self.surrounding_rooms.append((x + 1, y))
         if y > 0:
             self.surrounding_rooms.append((x, y - 1))
-        if y < 9:
+        if y < n - 1:
             self.surrounding_rooms.append((x, y + 1))
 
     def __str__(self):

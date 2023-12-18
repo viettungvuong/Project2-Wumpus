@@ -23,7 +23,7 @@ class KB:
         return result
 
     def backward_chaining(self, q):
-        if q in self.sentences:
+        if self.check(q):
             return True
 
         if isinstance(q, Not):
@@ -36,16 +36,16 @@ class KB:
             return self.backward_chaining(q.left) or self.backward_chaining(q.right)
 
         for sentence in self.sentences:
-            if isinstance(sentence, If):
-                if sentence.left == q:
+            if isinstance(sentence, Iff):
+                if str(sentence.left) == str(q):
                     return self.backward_chaining(sentence.right)
                 elif (
                     sentence.right == q
                 ):  # nếu trong câu implies mà q nằm ở vế phải (được suy ra)
                     return self.backward_chaining(sentence.left)
 
-            elif isinstance(sentence, Iff):
-                if sentence.left == q:
+            elif isinstance(sentence, If):
+                if str(sentence.left) == str(q):
                     return self.backward_chaining(sentence.right)
 
         return False

@@ -1,5 +1,5 @@
 from enum import Enum
-from logic import Atomic, Not
+from logic import Atomic, Not, Or
 from room import Room
 from kb import KB
 
@@ -16,7 +16,7 @@ class Direction(Enum):
 
 class Map:
     def __init__(self):
-        self.map = [[Room(i, j) for j in range(10)] for i in range(10)]
+        self.map = [[Room(i, j, 0) for j in range(10)] for i in range(10)]
         self.n = 0
 
     def get_room(self, x, y):
@@ -35,13 +35,14 @@ class Map:
                 self.n = n
 
                 # 2d array representing the self.map
-                self.map = [[Room(i, j) for j in range(n)] for i in range(n)]
+                self.map = [[Room(i, j, n) for j in range(n)] for i in range(n)]
                 agent = None
                 kb = KB()
 
                 for i in range(n):
                     line = lines.readline()
                     line_split = line.split(".")
+
                     for j in range(n):
                         if line_split[j].__contains__("A"):
                             agent = Agent(self.map[i][j])
@@ -105,7 +106,7 @@ class Agent:
         self.kb.add_sentence(Not(Atomic(f"P{current_room.x},{current_room.y}")))
 
         self.visited_rooms = []
-        self.safe_rooms = set()
+        self.safe_rooms = []
         self.frontier = []
 
         self.alive = True
@@ -181,6 +182,7 @@ class Agent:
         ) or self.kb.check(Atomic(f"P{self.current_room.x},{self.current_room.y}")):
             self.points -= 10000
             self.alive = False
+            print(f"You died at {self.current_room}")
             return
 
         if self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}")):
@@ -190,24 +192,43 @@ class Agent:
             print(f"You collected gold at {self.current_room.x},{self.current_room.y}")
 
         if (
-            self.kb.check(Not(Atomic(f"B{self.current_room.x},{self.current_room.y}")))
-            and self.kb.backward_chaining(
-                Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
-            )
+            self.kb.check(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
             == False
-        ):  # if not breeze
+        ):  # if not breeze then cannot be pit
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"P{r[0]},{r[1]}")))
 
+        elif (
+            self.kb.check(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
+            == True
+        ):  # if not breeze then cannot be pit
+            disjunction = None
+            for r in self.current_room.surrounding_rooms:
+                if disjunction is None:
+                    disjunction = Atomic(f"P{r[0]},{r[1]}")
+                else:
+                    disjunction = Or(disjunction, Atomic(f"P{r[0]},{r[1]}"))
+
+            self.kb.add_sentence(disjunction)
+
         if (
-            self.kb.check(Not(Atomic(f"S{self.current_room.x},{self.current_room.y}")))
-            and self.kb.backward_chaining(
-                Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
-            )
+            self.kb.check(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
             == False
-        ):  # if not stench
+        ):  # if not stench then cannmot be wumpus
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
+        elif (
+            self.kb.check(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
+            == True
+        ):
+            disjunction = None
+            for r in self.current_room.surrounding_rooms:
+                if disjunction is None:
+                    disjunction = Atomic(f"W{r[0]},{r[1]}")
+                else:
+                    disjunction = Or(disjunction, Atomic(f"W{r[0]},{r[1]}"))
+
+            self.kb.add_sentence(disjunction)
 
         map.get_room(self.current_room.x, self.current_room.y).relationship(self.kb)
 
@@ -228,15 +249,17 @@ class Agent:
 
     def find_safe(self):
         for room in self.frontier:
-            check_wumpus = Not(Atomic(f"W{room.x},{room.y}"))
-            check_pit = Not(Atomic(f"P{room.x},{room.y}"))
+            check_wumpus = Atomic(f"W{room.x},{room.y}")
+            check_pit = Atomic(f"P{room.x},{room.y}")
             if (
-                self.kb.check(check_wumpus) == False
-                and self.kb.check(check_pit) == False
-                and self.kb.backward_chaining(check_wumpus) == False
+                self.kb.check(Not(check_wumpus)) == True
+                and self.kb.check(Not(check_pit)) == True
+            ) or (
+                self.kb.backward_chaining(check_wumpus) == False
                 and self.kb.backward_chaining(check_pit) == False
             ):
-                self.safe_rooms.add(room)
+                if room not in self.safe_rooms and room not in self.visited_rooms:
+                    self.safe_rooms.append(room)
 
     def moves_trace(self, final_room):
         current = final_room
@@ -248,9 +271,13 @@ class Agent:
         return path
 
     def solve(self):
+        i = 0
         while self.alive:
             # nếu bị loop phòng (hai lần liên tiếp đều là 1 phòng) thì tìm đường ra cave
-            print(f"Current rooom: {self.current_room}")
+            print(
+                f"Current room: {self.current_room} - Parent room: {self.current_room.parent is not None and self.current_room.parent}"
+            )
+            i += 1
             if self.alive == False:
                 break
 
@@ -308,6 +335,7 @@ class Agent:
             self.move_to(next_room)
 
         print(f"Final points: {self.points}")
+        print(f"Total rooms visited: {i}")
 
     def exit_cave(self):
         # search from current room to the cave
@@ -322,7 +350,9 @@ class Agent:
         print("Finding cave exit...")
 
         while not (self.current_room.x == 0 and self.current_room.y == 0):
-            print(f"Current room: {self.current_room}")
+            print(
+                f"Current room: {self.current_room} - Parent room: {self.current_room.parent is not None and self.current_room.parent}"
+            )
             if len(self.safe_rooms) > 0:
                 self.safe_rooms = sorted(
                     self.safe_rooms,
