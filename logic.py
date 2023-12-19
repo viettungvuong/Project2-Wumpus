@@ -19,19 +19,19 @@ def IF(main, other):
 
 
 class Formula:
-    def value(self, q):
+    def eval(self, q):
         pass
 
     def __str__(self):
         pass
 
-    def countSymbols(self):
+    def count_symbols(self):
         pass
 
     def contain(self, item):
         pass
 
-    def getSymbols(self):
+    def get_symbols(self):
         pass
 
     def isSymbol(self):
@@ -116,11 +116,11 @@ class Operator(Formula):
             return True
         return self.left.contain(item) or self.right.contain(item)
 
-    def getSymbols(self):  # get all symbols in the formula
+    def get_symbols(self):  # get all symbols in the formula
         result = set()
 
-        l = self.left.getSymbols()
-        r = self.right.getSymbols()
+        l = self.left.get_symbols()
+        r = self.right.get_symbols()
 
         for i in l:
             result.add(str(i))
@@ -130,8 +130,8 @@ class Operator(Formula):
 
         return result
 
-    def countSymbols(self):
-        return self.left.countSymbols() + self.right.countSymbols()
+    def count_symbols(self):
+        return self.left.count_symbols() + self.right.count_symbols()
 
 
 class And(Operator):
@@ -139,8 +139,8 @@ class And(Operator):
         super().__init__(left, right)
         self.op = " ∧ "
 
-    def value(self, q):
-        return self.left.value(q) and self.right.value(q)
+    def eval(self, q):
+        return self.left.eval(q) and self.right.eval(q)
 
 
 class Or(Operator):
@@ -148,8 +148,8 @@ class Or(Operator):
         super().__init__(left, right)
         self.op = " ∨ "
 
-    def value(self, q):
-        return self.left.value(q) or self.right.value(q)
+    def eval(self, q):
+        return self.left.eval(q) or self.right.eval(q)
 
 
 class If(Operator):
@@ -157,8 +157,8 @@ class If(Operator):
         super().__init__(left, right)
         self.op = " → "
 
-    def value(self, q):
-        return not self.left.value(q) or self.right.value(q)
+    def eval(self, q):
+        return not self.left.eval(q) or self.right.eval(q)
 
 
 class Iff(Operator):
@@ -166,9 +166,9 @@ class Iff(Operator):
         super().__init__(left, right)
         self.op = " ↔ "
 
-    def value(self, q):
-        return (not self.left.value(q) or self.right.value(q)) and (
-            not self.right.value(q) or self.left.value(q)
+    def eval(self, q):
+        return (not self.left.eval(q) or self.right.eval(q)) and (
+            not self.right.eval(q) or self.left.eval(q)
         )
 
 
@@ -176,8 +176,8 @@ class Not(Formula):
     def __init__(self, other):
         self.child = other
 
-    def value(self, q):
-        return not self.child.value(q)
+    def eval(self, q):
+        return not self.child.eval(q)
 
     def __str__(self):
         return "¬" + str(self.child)
@@ -187,22 +187,22 @@ class Not(Formula):
             return True
         return self.child.contain(item)
 
-    def getSymbols(self):
+    def get_symbols(self):
         res = set()
         if self.isSymbol():
             res.add(self)
             return res
-        return self.child.getSymbols()
+        return self.child.get_symbols()
 
-    def countSymbols(self):
-        return self.child.countSymbols()
+    def count_symbols(self):
+        return self.child.count_symbols()
 
 
 class Atomic(Formula):
     def __init__(self, name):
         self.name = name
 
-    def value(self, q):
+    def eval(self, q):
         return str(self) in q
 
     def __str__(self):
@@ -213,9 +213,9 @@ class Atomic(Formula):
             return True
         return False
 
-    def getSymbols(self):
+    def get_symbols(self):
         res = set()
         res.add(self)
 
-    def countSymbols(self):
+    def count_symbols(self):
         return 1

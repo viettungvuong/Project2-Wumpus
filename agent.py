@@ -5,6 +5,7 @@ from kb import KB
 
 import math
 import copy
+import random
 
 
 class Direction(Enum):
@@ -22,11 +23,70 @@ class Map:
     def get_room(self, x, y):
         return self.map[x][y]
 
-    def gold_heuristic(self, current_room, goal_room):
+    def heuristic(self, current_room, goal_room):
         return math.sqrt(
             (current_room.x - goal_room.x) ** 2 + (current_room.y - goal_room.y) ** 2
         )
         # euclidean distance
+
+    def random_map(self):
+        n = random.randint(3, 10)
+        self.n = n
+        self.map = [[Room(i, j, n) for j in range(n)] for i in range(n)]
+
+        map_str = ["" for _ in range(n)]
+
+        agent = None
+        kb = KB()
+        has_agent = False
+        agent_pos = None
+
+        for i in range(n):
+            map_str[i] = ""
+            for j in range(n):
+                choice = random.randint(0, 15)
+                if choice == 0:  # wumpus position
+                    kb.add_sentence(Atomic(f"W{i},{j}"))
+                    moves = self.map[i][j].surrounding_rooms
+                    for move in moves:
+                        kb.add_sentence(Atomic(f"S{move[0]},{move[1]}"))
+                    map_str[i] += "W"
+                elif choice == 1:
+                    if i == 0 and j == 0:  # pit không thể ở chỗ ra khỏi cave
+                        map_str[i] += "-"
+                        if j < n - 1:
+                            map_str[i] += "."
+                        continue
+                    kb.add_sentence(Atomic(f"P{i},{j}"))
+                    moves = self.map[i][j].surrounding_rooms
+                    for move in moves:
+                        kb.add_sentence(Atomic(f"B{move[0]},{move[1]}"))
+                    map_str[i] += "P"
+                elif choice == 2:
+                    kb.add_sentence(Atomic(f"G{i},{j}"))
+                    map_str[i] += "G"
+                elif choice == 3:
+                    if has_agent == False:
+                        agent_pos = (i, j)
+                        has_agent = True
+                        map_str[i] += "A"
+                        kb.add_sentence(Not(Atomic(f"W{i},{j}")))
+                        kb.add_sentence(Not(Atomic(f"P{i},{j}")))
+                    else:
+                        map_str[i] += "-"
+                else:
+                    map_str[i] += "-"
+
+                if j < n - 1:
+                    map_str[i] += "."
+
+        for i in range(n):
+            print(map_str[i])
+        print("\n")
+
+        agent = Agent(self.map[agent_pos[0]][agent_pos[1]], kb)
+        agent.kb = kb
+        return agent
 
     def read_map(self, file_name):
         try:
@@ -38,6 +98,7 @@ class Map:
                 self.map = [[Room(i, j, n) for j in range(n)] for i in range(n)]
                 agent = None
                 kb = KB()
+                agent_pos = None
 
                 for i in range(n):
                     line = lines.readline()
@@ -45,7 +106,9 @@ class Map:
 
                     for j in range(n):
                         if line_split[j].__contains__("A"):
-                            agent = Agent(self.map[i][j])
+                            kb.add_sentence(Not(Atomic(f"W{i},{j}")))
+                            kb.add_sentence(Not(Atomic(f"P{i},{j}")))
+                            agent_pos = (i, j)
 
                         elif line_split[j].__contains__("G"):
                             kb.add_sentence(Atomic(f"G{i},{j}"))
@@ -62,6 +125,7 @@ class Map:
                             for move in moves:
                                 kb.add_sentence(Atomic(f"B{move[0]},{move[1]}"))
 
+                agent = Agent(self.map[agent_pos[0]][agent_pos[1]], kb)
                 agent.kb = kb
                 return agent
 
@@ -95,15 +159,10 @@ def room_direction(map, current_room, direction):
 
 
 class Agent:
-    def __init__(self, current_room):
+    def __init__(self, current_room, kb):
         self.current_room = None
         self.direction = Direction.RIGHT
         self.points = 0
-
-        self.kb = KB()
-        # self.kb.add_sentence(Atomic(f"A{current_room.x},{current_room.y}"))
-        self.kb.add_sentence(Not(Atomic(f"W{current_room.x},{current_room.y}")))
-        self.kb.add_sentence(Not(Atomic(f"P{current_room.x},{current_room.y}")))
 
         self.visited_rooms = []
         self.safe_rooms = []
@@ -112,6 +171,8 @@ class Agent:
         self.alive = True
 
         self.achieved_golds = 0
+
+        self.kb = kb
 
         self.move_to(current_room)
 
@@ -182,7 +243,7 @@ class Agent:
         ) or self.kb.check(Atomic(f"P{self.current_room.x},{self.current_room.y}")):
             self.points -= 10000
             self.alive = False
-            print(f"You died at {self.current_room}")
+            print(f"You died at {self.current_room} - {self.current_room.parent}")
             return
 
         if self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}")):
@@ -240,10 +301,12 @@ class Agent:
             if (
                 considering_room not in self.visited_rooms
                 and considering_room not in self.frontier
-                and self.kb.check(Atomic(f"P{r[0]},{r[1]}")) == False
                 and self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}")) == False
             ):
                 # thêm một cái giống node, lưu lại phòng trc của considering room (là room) để ta truy path
+                if r[0] == 3 and r[1] == 4:
+                    print(f"Considering room: {considering_room}")
+                    print(self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}")))
                 considering_room.parent = current_room
                 self.frontier.append(considering_room)
 
@@ -360,7 +423,7 @@ class Agent:
             if len(self.safe_rooms) > 0:
                 self.safe_rooms = sorted(
                     self.safe_rooms,
-                    key=lambda x: map.gold_heuristic(
+                    key=lambda x: map.heuristic(
                         x, map.get_room(0, 0)
                     ),  # nhớ chỉnh index để 0, 0 thành 1, 1
                 )
@@ -370,7 +433,7 @@ class Agent:
             else:
                 self.frontier = sorted(
                     self.frontier,
-                    key=lambda x: map.gold_heuristic(
+                    key=lambda x: map.heuristic(
                         x, map.get_room(0, 0)
                     ),  # nhớ chỉnh index để 0, 0 thành 1, 1 theo đúng bài
                 )
@@ -394,9 +457,9 @@ class Agent:
                 if next_room is None:
                     next_room = self.frontier.pop(index_pop)
                 else:
-                    if map.gold_heuristic(
+                    if map.heuristic(
                         self.frontier[index_pop], map.get_room(0, 0)
-                    ) < map.gold_heuristic(next_room, map.get_room(0, 0)):
+                    ) < map.heuristic(next_room, map.get_room(0, 0)):
                         next_room = self.frontier.pop(index_pop)
                 # print(f"Chosen room: {next_room}")
                 # print(f"Visited: {next_room in self.visited_rooms}")
