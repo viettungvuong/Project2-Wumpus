@@ -46,7 +46,7 @@ class Map:
             for j in range(n):
                 choice = random.randint(0, 15)
                 if choice == 0:  # wumpus position
-                    kb.add_sentence(Atomic(f"W{i},{j}"))
+                    # kb.add_sentence(Atomic(f"W{i},{j}"))
                     moves = self.map[i][j].surrounding_rooms
                     for move in moves:
                         kb.add_sentence(Atomic(f"S{move[0]},{move[1]}"))
@@ -57,7 +57,7 @@ class Map:
                         if j < n - 1:
                             map_str[i] += "."
                         continue
-                    kb.add_sentence(Atomic(f"P{i},{j}"))
+                    # kb.add_sentence(Atomic(f"P{i},{j}"))
                     moves = self.map[i][j].surrounding_rooms
                     for move in moves:
                         kb.add_sentence(Atomic(f"B{move[0]},{move[1]}"))
@@ -210,9 +210,10 @@ class Agent:
             return
 
         # self.points -= 10
-        self.percept()
+        percept = self.percept()
         self.expand_room(next_room)
         self.visited_rooms.append(next_room)
+        return percept
 
     def shoot(self, next_room):
         # next_room = room_direction(self.current_room, self.direction)
@@ -238,19 +239,27 @@ class Agent:
                 print("You missed!")
 
     def percept(self):
+        special = None
+
         if self.kb.check(
             Atomic(f"W{self.current_room.x},{self.current_room.y}")
         ) or self.kb.check(Atomic(f"P{self.current_room.x},{self.current_room.y}")):
             self.points -= 10000
             self.alive = False
             print(f"You died at {self.current_room} - {self.current_room.parent}")
-            return
+            return (
+                "W"
+                if self.kb.check(
+                    Atomic(f"W{self.current_room.x},{self.current_room.y}")
+                )
+                else "P"
+            )
 
         if self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}")):
-            self.points += 10000
+            self.points += 100
             self.achieved_golds += 1
             self.kb.remove(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
-            print(f"You collected gold at {self.current_room.x},{self.current_room.y}")
+            special = "G"
 
         if (
             self.kb.check(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
@@ -293,6 +302,8 @@ class Agent:
 
         map.get_room(self.current_room.x, self.current_room.y).relationship(self.kb)
 
+        return special
+
     def expand_room(self, current_room):
         for r in current_room.surrounding_rooms:
             considering_room = copy.copy(
@@ -331,11 +342,8 @@ class Agent:
 
     def solve(self):
         i = 0
+        moves = [(self.current_room, "Start")]
         while self.alive:
-            # nếu bị loop phòng (hai lần liên tiếp đều là 1 phòng) thì tìm đường ra cave
-            print(
-                f"Current room: {self.current_room} - Parent room: {self.current_room.parent is not None and self.current_room.parent}"
-            )
             i += 1
             if self.alive == False:
                 break
@@ -384,18 +392,17 @@ class Agent:
                     break
 
             if next_room is None:  # xong hết rồi
-                goal_room = self.exit_cave()
-                # moves = self.moves_trace(goal_room)
-                # while len(moves) > 0:
-                #     move = moves.pop(-1)
-                #     print(f"{move.x},{move.y}")
+                self.exit_cave(moves)
+                for room in moves:
+                    print(f"Move to {room[0]} {room[1] if room[1] is not None else ''}")
                 break
 
-            self.move_to(next_room)
+            move_to = self.move_to(next_room)
+            moves.append((next_room, move_to))
 
         print(f"Final points: {self.points}")
 
-    def exit_cave(self):
+    def exit_cave(self, moves):
         # search from current room to the cave
         current_room = self.current_room
 
@@ -408,12 +415,8 @@ class Agent:
         print("Finding cave exit...")
 
         while current_room is None or not (current_room.x == 0 and current_room.y == 0):
-            if current_room is not None:
-                print(
-                    f"Current room: {current_room} - Parent room: {current_room.parent is not None and current_room.parent}"
-                )
-
             next_room = None
+            shot_wumpus = False
 
             if len(self.safe_rooms) > 0:
                 self.safe_rooms = sorted(
@@ -447,7 +450,7 @@ class Agent:
                     or self.kb.backward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
                 ):  # chỉ nên shoot khi len = 1
                     self.shoot(self.frontier[index_pop])  # shoot wumpus
-                    print(f"Shoot wumpus at ({r[0]}, {r[1]})")
+                    shot_wumpus = True
 
                 if next_room is None:
                     next_room = self.frontier.pop(index_pop)
@@ -460,7 +463,15 @@ class Agent:
                 # print(f"Visited: {next_room in self.visited_rooms}")
 
             current_room = copy.copy(next_room)
-            self.move_to(current_room)
+            move_to = self.move_to(current_room)
+            if current_room.x == 0 and current_room.y == 0:
+                move_to = "Exit"
+            if shot_wumpus == True:
+                if move_to is None:
+                    move_to = "Shot Wumpus"
+                else:
+                    move_to += "Shot Wumpus"
+            moves.append((current_room, move_to))
 
         self.points += 10
         print(f"Exit cave successfully")
@@ -468,7 +479,7 @@ class Agent:
 
 
 map = Map()
-agent = map.random_map()
-# agent = map.read_map("map2.txt")
+# agent = map.random_map()
+agent = map.read_map("map3.txt")
 if agent is not None:
     agent.solve()
