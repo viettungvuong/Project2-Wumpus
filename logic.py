@@ -25,6 +25,9 @@ class Formula:
     def __str__(self):
         pass
 
+    def __eq__(self, other):
+        return str(self) == str(other)
+
     def count_symbols(self):
         pass
 

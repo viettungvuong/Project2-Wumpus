@@ -303,10 +303,6 @@ class Agent:
                 and considering_room not in self.frontier
                 and self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}")) == False
             ):
-                # thêm một cái giống node, lưu lại phòng trc của considering room (là room) để ta truy path
-                if r[0] == 3 and r[1] == 4:
-                    print(f"Considering room: {considering_room}")
-                    print(self.kb.backward_chaining(Atomic(f"P{r[0]},{r[1]}")))
                 considering_room.parent = current_room
                 self.frontier.append(considering_room)
 
@@ -398,7 +394,6 @@ class Agent:
             self.move_to(next_room)
 
         print(f"Final points: {self.points}")
-        print(f"Total rooms visited: {i}")
 
     def exit_cave(self):
         # search from current room to the cave
@@ -473,6 +468,7 @@ class Agent:
 
 
 map = Map()
-agent = map.read_map("map2.txt")
+agent = map.random_map()
+# agent = map.read_map("map2.txt")
 if agent is not None:
     agent.solve()

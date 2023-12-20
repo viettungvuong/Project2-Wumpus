@@ -39,14 +39,14 @@ class KB:
             if isinstance(sentence, Iff):
                 if str(sentence.left) == str(q):
                     return self.backward_chaining(sentence.right)
-                elif (
-                    sentence.right == q
+                elif str(sentence.right) == str(
+                    q
                 ):  # nếu trong câu implies mà q nằm ở vế phải (được suy ra)
                     return self.backward_chaining(sentence.left)
 
             elif isinstance(sentence, If):
-                if str(sentence.left) == str(q):
-                    return self.backward_chaining(sentence.right)
+                if str(sentence.right) == str(q):
+                    return self.backward_chaining(sentence.left)
 
         return False
 
