@@ -331,14 +331,60 @@ class Agent:
                 if room not in self.safe_rooms and room not in self.visited_rooms:
                     self.safe_rooms.append(room)
 
-    def moves_trace(self, final_room):
-        current = final_room
-        path = []
-        while current is not None:
-            path.append(current)
-            current = current.parent
+    # def moves_trace(self, moves):
+    #     moves_copy = []
+    #     moves_copy.extend(moves)
 
-        return path
+    #     moves_len = len(moves)
+
+    #     for i in range(1, moves_len):
+    #         room = moves[i][0]  # current room
+    #         if i < moves_len - 1:
+    #             next_room = moves[i + 1][0]
+    #         if room.parent == next_room.parent:
+    #             parent = copy.copy(room.parent)
+    #             parent.parent = room
+    #             moves_copy.insert(i + 1, (parent, None))
+    #         else:
+    #             # find parent of room
+    #             common_parent = None
+
+    #             current = copy.copy(room)
+    #             current_next = copy.copy(next_room)
+    #             current_list = [current]
+    #             next_list = [current_next]
+    #             while current.parent is not None and current_next.parent is not None:
+    #                 current = current.parent
+    #                 current_next = current_next.parent
+    #                 current_list.append(current)
+    #                 next_list.append(current_next)
+    #                 if current in next_list:
+    #                     common_parent = current
+    #                     break
+    #                 if current_next in current_list:
+    #                     common_parent = current_next
+    #                     break
+
+    #             if common_parent is not None:
+    #                 # traverse back from current to the common parent
+    #                 current_index = i + 1
+
+    #                 for current_trav in current_list:
+    #                     if current_trav == room:  # current room
+    #                         continue
+    #                     moves_copy.insert(current_index, (current_trav, None))
+    #                     current_index += 1
+
+    #                 current_index = i + 1
+    #                 next_list.reverse()  # traverse from the common parent to the next room
+
+    #                 for current_trav in next_list:
+    #                     if current_trav == common_parent:  # current room
+    #                         continue
+    #                     moves_copy.insert(current_index, (current_trav, None))
+    #                     current_index = i + 1
+
+    #     return moves_copy
 
     def solve(self):
         i = 0
@@ -353,7 +399,7 @@ class Agent:
             next_room = None
 
             if len(self.safe_rooms) > 0:
-                next_room = self.safe_rooms.pop(0)
+                next_room = self.safe_rooms.pop(-1)
 
             else:
                 # for r in self.current_room.surrounding_rooms:
@@ -373,7 +419,8 @@ class Agent:
                 #             continue
                 #         next_room = map.get_room(r[0], r[1])
                 #         break
-                for room in self.frontier:
+                for i in range(len(self.frontier) - 1, -1, -1):
+                    room = self.frontier[i]
                     r = (room.x, room.y)
                     if (
                         self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
@@ -393,8 +440,11 @@ class Agent:
 
             if next_room is None:  # xong hết rồi
                 self.exit_cave(moves)
+                # moves = self.moves_trace(moves)
                 for room in moves:
-                    print(f"Move to {room[0]} {room[1] if room[1] is not None else ''}")
+                    print(
+                        f"Move to {room[0]} (Parent: {room[0].parent}) {room[1] if room[1] is not None else ''}"
+                    )
                 break
 
             move_to = self.move_to(next_room)
@@ -476,6 +526,8 @@ class Agent:
         self.points += 10
         print(f"Exit cave successfully")
         return current_room
+
+    # nếu gặp wumpus thì ta xem thử nếu bắn wumpus và đi qua thì có được nhiều điểm hơn so với không đi qua wumpus không
 
 
 map = Map()

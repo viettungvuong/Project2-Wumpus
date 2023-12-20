@@ -23,7 +23,9 @@ class Room:
     def __str__(self):
         return f"({self.x},{self.y})"
 
-    def __eq__(self, __value: object) -> bool:
+    def __eq__(self, __value) -> bool:
+        if not isinstance(__value, Room):
+            return False
         return self.x == __value.x and self.y == __value.y
 
     def __hash__(self) -> int:
