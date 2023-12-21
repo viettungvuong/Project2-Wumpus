@@ -1,3 +1,5 @@
+import turtle
+import time
 from enum import Enum
 from logic import Atomic, Not, Or
 from room import Room
@@ -386,10 +388,45 @@ class Agent:
 
     #     return moves_copy
 
+    def draw_map(self, screen):
+        turtle.hideturtle()  # Hide the turtle cursor
+        screen.tracer(0)  # Turn off automatic screen updates
+
+        # Draw safe rooms in red
+        for room in self.safe_rooms:
+            self.draw_room(room, "red")
+
+        # Draw frontier rooms in grey
+        for room in self.frontier:
+            self.draw_room(room, "grey")
+
+        # Draw the current room in red
+        self.draw_room(self.current_room, "red")
+
+        screen.update()  # Update the screen
+
+    def draw_room(self, room, color):
+        turtle.penup()
+        turtle.goto(room.x * 20, room.y * 20)  # Adjust the scaling factor as needed
+        turtle.pendown()
+        turtle.begin_fill()
+        turtle.color(color)
+        for _ in range(4):
+            turtle.forward(20)  # Adjust the size of the room as needed
+            turtle.left(90)
+        turtle.end_fill()
+
     def solve(self):
         i = 0
         moves = [(self.current_room, "Start")]
+        screen = turtle.Screen()
+        screen.setup(width=600, height=600)
         while self.alive:
+            # draw map
+            self.draw_map(screen)
+            time.sleep(0.5)
+
+
             i += 1
             if self.alive == False:
                 break
@@ -449,7 +486,6 @@ class Agent:
 
             move_to = self.move_to(next_room)
             moves.append((next_room, move_to))
-
         print(f"Final points: {self.points}")
 
     def exit_cave(self, moves):
@@ -530,8 +566,10 @@ class Agent:
     # nếu gặp wumpus thì ta xem thử nếu bắn wumpus và đi qua thì có được nhiều điểm hơn so với không đi qua wumpus không
 
 
+
 map = Map()
 # agent = map.random_map()
+
 agent = map.read_map("map3.txt")
 if agent is not None:
     agent.solve()
