@@ -20,6 +20,7 @@ class KB:
         result = []
         for sentence in self.sentences:
             result.append(sentence.toCNF())
+            # print(result[-1])
         return result
 
     def forward_chaining(self, q):
@@ -85,50 +86,62 @@ class KB:
                                 agenda.append(sentence.left)
         return False
 
-    def resolution(kb, query):  # return True if KB entails query
+    def resolution(kb, query):
         if kb.check(query):
             return True
 
-        print(query)
+        if kb.check(Not(query)):
+            return False
 
         def resolve(clause1, clause2):
-            new_clauses = []
+            resolvents = set()
+            resolved = False
 
             for literal in clause1.get_literals():
                 negated_literal = Not(literal)
-                if (
-                    negated_literal in clause2.get_literals()
-                ):  # if two clauses have positive and the other negative
-                    combined = []
-                    combined.extend(clause1.get_literals())
-                    combined.extend(clause2.get_literals())
 
-                    for l in combined:  # remove two literals if resolve
-                        if l != literal and l != negated_literal:
-                            new_clauses.append(l)
-                    break
+                if str(negated_literal) in [str(l) for l in clause2.get_literals()]:
+                    resolved = True
 
-            return new_clauses
+                    new_clause = [
+                        l for l in clause1.get_literals() if str(l) != str(literal)
+                    ] + [
+                        l
+                        for l in clause2.get_literals()
+                        if str(l) != str(negated_literal)
+                    ]
+
+                    if not new_clause:
+                        return frozenset(), resolved
+
+                    resolvents.update(frozenset(new_clause))
+
+            return resolvents, resolved
 
         clauses = kb.toCnf()
-        clauses.append(Not(query))  # add negated query to clauses to try to prove
+        query = query.toCNF()
+        clauses.append(Not(query).toCNF())
+
         new = []
+        resolved_clauses = set()  # Keep track of resolved clauses
 
         while True:
             n = len(clauses)
 
             for i in range(n):
                 for j in range(i + 1, n):
-                    resolvents = resolve(clauses[i], clauses[j])
-                    if len(resolvents) == 0:
-                        return True
-                    new.extend(
-                        resolvent for resolvent in resolvents if resolvent not in new
-                    )
+                    if (i, j) in resolved_clauses:  # Skip already resolved clauses
+                        continue
 
-            if all(item in clauses for item in new):
+                    resolvents, resolved = resolve(clauses[i], clauses[j])
+                    if resolved:
+                        if len(resolvents) == 0 or frozenset() in resolvents:
+                            return True
+                        new.extend(resolvents)
+
+                    resolved_clauses.add((i, j))  # Mark clauses as resolved
+
+            if set(new).issubset(set(clauses)):
                 return False
 
-            clauses.extend(
-                new_clause for new_clause in new if new_clause not in clauses
-            )
+            clauses.extend(new)

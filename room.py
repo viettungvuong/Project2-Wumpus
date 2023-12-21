@@ -7,6 +7,9 @@ class Room:
         self.y = y
         self.n = n
 
+        self.wumpus = False
+        self.pit = False
+
         self.parent = None
 
         self.surrounding_rooms = []
@@ -49,7 +52,7 @@ class Room:
                 right = Atomic(f"B{r[0]},{r[1]}")
             else:
                 right = And(right, Atomic(f"B{r[0]},{r[1]}"))
-        kb.add_sentence(If(left, right))
+        kb.add_sentence(Iff(left, right))
 
         # relationship stench wumpus
         left = Atomic(f"S{self.x},{self.y}")
@@ -58,7 +61,7 @@ class Room:
             if right is None:
                 right = Atomic(f"W{r[0]},{r[1]}")
             else:
-                right = Or(right, Atomic(f"w{r[0]},{r[1]}"))
+                right = Or(right, Atomic(f"W{r[0]},{r[1]}"))
         kb.add_sentence(Iff(left, right))
 
         # if there is wumpus in a room, there is stench in surrounding rooms
@@ -69,4 +72,4 @@ class Room:
                 right = Atomic(f"S{r[0]},{r[1]}")
             else:
                 right = And(right, Atomic(f"S{r[0]},{r[1]}"))
-        kb.add_sentence(If(left, right))
+        kb.add_sentence(Iff(left, right))

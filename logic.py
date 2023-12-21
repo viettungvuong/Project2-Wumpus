@@ -28,6 +28,9 @@ class Formula:
     def __eq__(self, other):
         return str(self) == str(other)
 
+    def __hash__(self):
+        return hash(str(self))
+
     def count_symbols(self):
         pass
 
@@ -46,27 +49,25 @@ class Formula:
 
     def toCNF(self):
         def imply_remove(s):
+            # Handle implications recursively
             if not isinstance(s, Atomic) and not isinstance(s, Not):
                 s.left = imply_remove(s.left)
                 s.right = imply_remove(s.right)
+
+            # Convert implications and biconditionals to CNF equivalents
             if isinstance(s, If):
-                a = s.left
-                b = s.right
-                return OR(NOT(a), b)
+                return OR(NOT(s.left), s.right)
             elif isinstance(s, Iff):
-                a = s.left
-                b = s.right
-                return AND(OR(NOT(a), b), OR(NOT(b), a))
+                return AND(OR(NOT(s.left), s.right), OR(NOT(s.right), s.left))
             return s
 
         def not_inside(s):
+            # Handle negations recursively, applying De Morgan's laws
             if isinstance(s, Not):
                 a = s.child
-                if isinstance(a, Not):  # double negation
+                if isinstance(a, Not):  # Double negation elimination
                     return not_inside(a.child)
-                if isinstance(a, And) or isinstance(
-                    a, Or
-                ):  # De Morgan's Law (not (a and b)) = (not a) or (not b))
+                if isinstance(a, And) or isinstance(a, Or):
                     if isinstance(a, And):
                         x = OR(NOT(a.left), NOT(a.right))
                     else:
@@ -74,27 +75,19 @@ class Formula:
                     x.left = not_inside(x.left)
                     x.right = not_inside(x.right)
                     return x
-                return s
-            else:
-                return s  # if not negation, return itself
+            return s
 
         def distribute_and_or(s):
-            if not isinstance(s, Atomic) and not isinstance(
-                s, Not
-            ):  # if not atomic and not negation
+            # Distribute And over Or recursively
+            if not isinstance(s, Atomic) and not isinstance(s, Not):
                 s.left = distribute_and_or(s.left)
                 s.right = distribute_and_or(s.right)
 
-            if isinstance(s, Or):  # ví dù laf a or (b and c) => (a or b) and (a or c)
-                if isinstance(
-                    s.right, And
-                ):  # ví dụ là a or (b and c) => (a or b) and (a or c)
+            if isinstance(s, Or):
+                if isinstance(s.right, And):
                     s = AND(OR(s.left, s.right.left), OR(s.left, s.right.right))
-                if isinstance(
-                    s.left, And
-                ):  # ví dụ là (b and c) or a => (b or a) and (c or a)
+                elif isinstance(s.left, And):
                     s = AND(OR(s.right, s.left.left), OR(s.right, s.left.right))
-
             return s
 
         q = self
@@ -112,12 +105,25 @@ class Operator(Formula):
         self.op = ""
 
     def __str__(self):
-        return "( " + str(self.left) + self.op + str(self.right) + " )"
+        return "(" + str(self.left) + self.op + str(self.right) + ")"
 
     def contain(self, item):
         if str(self) == str(item):
             return True
         return self.left.contain(item) or self.right.contain(item)
+
+    def get_literals(self):
+        result = set()
+        l = self.left.get_literals()
+        r = self.right.get_literals()
+
+        for i in l:
+            result.add(i)
+        for i in r:
+            if not str(i) in result:
+                result.add(i)
+
+        return result
 
     def get_symbols(self):  # get all symbols in the formula
         result = set()
@@ -197,6 +203,13 @@ class Not(Formula):
             return res
         return self.child.get_symbols()
 
+    def get_literals(self):
+        res = set()
+        if self.isSymbol():
+            res.add(self)
+            return res
+        return self.child.get_literals()
+
     def count_symbols(self):
         return self.child.count_symbols()
 
@@ -219,6 +232,12 @@ class Atomic(Formula):
     def get_symbols(self):
         res = set()
         res.add(self)
+        return res
+
+    def get_literals(self):
+        res = set()
+        res.add(self)
+        return res
 
     def count_symbols(self):
         return 1
