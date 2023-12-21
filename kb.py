@@ -19,94 +19,116 @@ class KB:
     def toCnf(self):
         result = []
         for sentence in self.sentences:
-            result.append(sentence.toCnf())
+            result.append(sentence.toCNF())
         return result
 
-    def backward_chaining(self, q):
+    def forward_chaining(self, q):
         if self.check(q):
             return True
 
-        if isinstance(q, Not):
-            return not self.backward_chaining(q.child)
-
-        if isinstance(q, And):
-            return self.backward_chaining(q.left) and self.backward_chaining(q.right)
-
-        if isinstance(q, Or):
-            return self.backward_chaining(q.left) or self.backward_chaining(q.right)
+        count = {}  # number of premises of each implication
+        inferred = {}
 
         for sentence in self.sentences:
-            if isinstance(sentence, Iff):
-                if str(sentence.left) == str(q):
-                    return self.backward_chaining(sentence.right)
-                elif str(sentence.right) == str(
-                    q
-                ):  # nếu trong câu implies mà q nằm ở vế phải (được suy ra)
-                    return self.backward_chaining(sentence.left)
+            if isinstance(sentence, Atomic):
+                count[str(sentence)] = 0
+                inferred[str(sentence)] = False
 
-            elif isinstance(sentence, If):
-                if str(sentence.right) == str(q):
-                    return self.backward_chaining(sentence.left)
+        for sentence in self.sentences:
+            if isinstance(sentence, If):
+                if count.get(str(sentence.right)) is None:
+                    count[str(sentence.right)] = 0
+                    inferred[str(sentence.right)] = False
+                count[str(sentence.right)] += 1
+            elif isinstance(sentence, Iff):
+                if count.get(str(sentence.right)) is None:
+                    count[str(sentence.right)] = 0
+                    inferred[str(sentence.right)] = False
+                count[str(sentence.right)] += 1
+                if count.get(str(sentence.left)) is None:
+                    count[str(sentence.left)] = 0
+                    inferred[str(sentence.left)] = False
+                count[str(sentence.left)] += 1
 
+        agenda = []  # list of symbols known to be true
+        for sentence in self.sentences:
+            if isinstance(sentence, Atomic):
+                if sentence == q:
+                    agenda.append(sentence)
+
+        while len(agenda) > 0:
+            p = agenda.pop()  # pop a symbol p
+            if p == q:  # if p is the query symbol
+                return True  # return true
+            if not inferred[p]:  # if p is not inferred yet
+                inferred[str(p)] = True  # mark p as inferred
+                for sentence in self.sentences:  # for each sentence in KB
+                    if isinstance(sentence, If):  # if sentence is an implication
+                        if sentence.left == p:  # if p is the premise of the implication
+                            count[
+                                str(sentence.right)
+                            ] -= 1  # decrease the number of premises of the implication
+                            if (
+                                count[str(sentence.right)] == 0
+                            ):  # if all premises of the implication are true
+                                agenda.append(
+                                    sentence.right
+                                )  # add the conclusion to the agenda (true)
+                    elif isinstance(sentence, Iff):
+                        if sentence.left == p:
+                            count[str(sentence.right)] -= 1
+                            if count[str(sentence.right)] == 0:
+                                agenda.append(sentence.right)
+                        elif sentence.right == p:
+                            count[str(sentence.left)] -= 1
+                            if count[str(sentence.left)] == 0:
+                                agenda.append(sentence.left)
         return False
 
-    def resolution(self, alpha):
-        def disjunction_clauses(or_clause):
-            if isinstance(or_clause, Atomic) or isinstance(or_clause, Not):
-                return [or_clause]
+    def resolution(kb, query):  # return True if KB entails query
+        if kb.check(query):
+            return True
 
-            if not isinstance(or_clause, Or):
-                return None
+        print(query)
 
-            res = []
-            if isinstance(or_clause.left, Or):
-                res += disjunction_clauses(or_clause.left)
-            else:
-                res.append(or_clause.left)
+        def resolve(clause1, clause2):
+            new_clauses = []
 
-            if isinstance(or_clause.right, Or):
-                res += disjunction_clauses(or_clause.right)
-            else:
-                res.append(or_clause.right)
+            for literal in clause1.get_literals():
+                negated_literal = Not(literal)
+                if (
+                    negated_literal in clause2.get_literals()
+                ):  # if two clauses have positive and the other negative
+                    combined = []
+                    combined.extend(clause1.get_literals())
+                    combined.extend(clause2.get_literals())
 
-            return res
+                    for l in combined:  # remove two literals if resolve
+                        if l != literal and l != negated_literal:
+                            new_clauses.append(l)
+                    break
 
-        clauses = self.toCnf()
-        clauses.append(Not(alpha).toCNF())  # add not alpha to clauses
+            return new_clauses
 
-        new = set()
+        clauses = kb.toCnf()
+        clauses.append(Not(query))  # add negated query to clauses to try to prove
+        new = []
+
         while True:
             n = len(clauses)
-            pairs = [
-                (clauses[i], clauses[j]) for i in range(n) for j in range(i + 1, n)
-            ]  # traverse through pairs of clauses
 
-            for clauseA, clauseB in pairs:
-                clauses_fromA = disjunction_clauses(clauseA)
-                clauses_fromB = disjunction_clauses(clauseB)
+            for i in range(n):
+                for j in range(i + 1, n):
+                    resolvents = resolve(clauses[i], clauses[j])
+                    if len(resolvents) == 0:
+                        return True
+                    new.extend(
+                        resolvent for resolvent in resolvents if resolvent not in new
+                    )
 
-                if clauses_fromA is None or clauses_fromB is None:
-                    continue
+            if all(item in clauses for item in new):
+                return False
 
-                for cA in clauses_fromA:
-                    for cB in clauses_fromB:
-                        if cA == Not(cB) or Not(cA) == cB:  # if cA and cB are opposite
-                            clauses.remove(clauseA)
-                            clauses.remove(clauseB)
-                            resolvents = [
-                                c
-                                for c in clauses_fromA + clauses_fromB
-                                if c != cA and c != cB
-                            ]
-                            new_clause = None
-                            for r in resolvents:
-                                if new_clause is None:
-                                    new_clause = r
-                                else:
-                                    new_clause = Or(new_clause, r)
-
-                            clauses.append(new_clause)
-
-            if len(clauses) == 0 or clauses[0] is None:
-                return True  # satisfiable
-            return False
+            clauses.extend(
+                new_clause for new_clause in new if new_clause not in clauses
+            )
