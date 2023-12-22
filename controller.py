@@ -20,7 +20,9 @@ def read_file(filename):
     return merged_rows
 
 # print(read_file("map2.txt"))
-
+################################################################################
+################################################################################
+################################################################################
 ################################################################################
 #input game asset
 import turtle
@@ -108,6 +110,9 @@ resized_img = img.resize(new_size)
 resized_img.save(gif_stench, "GIF")
 turtle.register_shape(gif_stench)
 ################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 wn = turtle.Screen()
 wn.bgcolor("white")
@@ -122,7 +127,9 @@ class Room():
         self.pit = False
         self.wumpus = False
         self.stench = 0
-        self.breeze = 0
+        # Truong hop dac biet la co 1 o trong giua 2 con wumpus
+        # Khi con wumpus dau tien chet thi cai o ma between 2 con này vẫn co stench chu no ko bien mat
+        self.breeze = False
         self.treasure = False
 
 #pit
@@ -133,6 +140,7 @@ class Pit(turtle.Turtle):
         self.shape(gif_pit)
         self.penup()
         self.speed(0)
+
 #treasure
 class Treasure(turtle.Turtle):
     def __init__(self):
@@ -144,6 +152,7 @@ class Treasure(turtle.Turtle):
     def destroy(self):
         self.goto(2000,2000)
         self.hideturtle()
+
 #breeze
 class Breeze(turtle.Turtle):
     def __init__(self):
@@ -165,6 +174,7 @@ class Stench(turtle.Turtle):
     def destroy(self):
         self.goto(2000,2000)
         self.hideturtle()
+
 #wumpus
 class Wumpus(turtle.Turtle):
     def __init__(self):
@@ -176,22 +186,19 @@ class Wumpus(turtle.Turtle):
     def destroy(self):
         self.goto(2000,2000)
         self.hideturtle()
+
 #player
 class Player(turtle.Turtle):
     def __init__(self):
         turtle.Turtle.__init__(self)
-        # self.shape(gif_image_path_agent_right)
         self.hideturtle()
         self.shape(gif_agent_right)
-        # self.color("blue")
-        self.shapesize(stretch_wid=2.56, stretch_len=2.56)
         self.penup()
         self.gold = 0
         self.speed(0)
     def go_up(self):
         move_to_x = self.xcor()
         move_to_y = self.ycor()+70
-        # if(move_to_x,move_to_y) not in walls:
         if(move_to_y < 350):
             self.goto(move_to_x, move_to_y)
             self.shape(gif_agent_up)
@@ -210,7 +217,6 @@ class Player(turtle.Turtle):
         move_to_x = player.xcor()
         move_to_y = player.ycor() - 70
 
-        # if (move_to_x, move_to_y) not in walls:
         if(move_to_y > -350):
             self.shape(gif_agent_down)
             self.goto(move_to_x, move_to_y)
@@ -220,7 +226,6 @@ class Player(turtle.Turtle):
         move_to_x = player.xcor() - 70
         move_to_y = player.ycor()
 
-        # if (move_to_x, move_to_y) not in walls:
         if(move_to_x > -350):
             self.shape(gif_agent_left)
             self.goto(move_to_x, move_to_y)
@@ -229,10 +234,8 @@ class Player(turtle.Turtle):
     def go_right(self):
         move_to_x = player.xcor() + 70
         move_to_y = player.ycor()
-        # self.shape(gif_image_path_agent_right)
 
-        # if (move_to_x, move_to_y) not in walls:
-        if( move_to_x < 350):
+        if( move_to_x < 350 ):
             self.shape(gif_agent_right)
             self.goto(move_to_x, move_to_y)
 
@@ -243,6 +246,7 @@ def draw_maze(map):
     t.pensize(4)
     t.speed(0)
     # print(len(map))
+
     # Draw vertical lines
     for i in range(len(map)+1):
         t.penup()
@@ -256,13 +260,15 @@ def draw_maze(map):
         t.goto(-350, 350 - i * 70)  # Start at top-left corner
         t.pendown()
         t.goto(350 - (10-len(map))*70, 350 - i * 70)  # Draw across to right
+
+    #Set image for agent, gold, pit, wumpus
     for y in range(len(map)):
-        room_line = []
+        room_line = [] #line 1,2,3,4 ....
         for x in range(len(map[y])):
             character = map[y][x]
             screen_x = -350 + (x * 70)
             screen_y = 350 - (y * 70)
-            room_element = Room(y,x)
+            room_element = Room(y,x) # room[x] in line[y]
 
             if character == 'A':
                 player.goto(screen_x+35, screen_y-35)
@@ -290,7 +296,7 @@ def draw_maze(map):
                 wumpus.showturtle()
 
             room_line.append(room_element)
-        rooms.append(room_line)
+        rooms.append(room_line) # add line[y] to rooms (rooms is 2-d array)
 
     ## add stench true and breeze true for each room
 
@@ -298,71 +304,40 @@ def draw_maze(map):
         for x in range(len(map[y])):
             if rooms[y][x].pit == True:
                 # rooms[y][x].shape("square")
-                if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x+1].breeze = rooms[y][x+1].breeze + 1
-                if x-1 >= 0 and rooms[y][x-1].pit == False: rooms[y][x-1].breeze += 1
-                if y+1 < len(map) and rooms[y+1][x].pit == False: rooms[y+1][x].breeze += 1
-                if y-1 >= 0 and rooms[y-1][x].pit == False: rooms[y-1][x].breeze += 1
+                if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x+1].breeze = True
+                if x-1 >= 0 and rooms[y][x-1].pit == False: rooms[y][x-1].breeze = True
+                if y+1 < len(map) and rooms[y+1][x].pit == False: rooms[y+1][x].breeze = True
+                if y-1 >= 0 and rooms[y-1][x].pit == False: rooms[y-1][x].breeze = True
             if rooms[y][x].wumpus == True:
                 if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x + 1].stench += 1
                 if x-1 >= 0 and rooms[y][x - 1].pit == False: rooms[y][x - 1].stench += 1
                 if y+1 < len(map) and rooms[y + 1][x].pit == False: rooms[y + 1][x].stench += 1
                 if y-1 >= 0 and rooms[y - 1][x].pit == False: rooms[y - 1][x].stench += 1
 
-    # for y in range(len(map)):
-    #     for x in range(len(map[y])):
-    #         if rooms[y][x].breeze == True and (rooms[y][x].pit == True or rooms[y][x].wumpus == True):
-    #             rooms[y][x].breeze = False
-    #         if rooms[y][x].stench == True and (rooms[y][x].pit == True or rooms[y][x].wumpus == True):
-    #             rooms[y][x].stench = False
-
+    #draw breeze + stench
     for y in range(len(map)):
         for x in range(len(map[y])):
             screen_x = -350 + (x * 70)
             screen_y = 350 - (y * 70)
-            if rooms[y][x].breeze > 0:
+            if rooms[y][x].breeze == True:
                 # print("Room", (y, x), "::::", rooms[y][x].breeze)
                 breeze = Breeze()
                 breeze.goto(screen_x + 50, screen_y - 25)
-                breezes.append(breeze)
+                breezes.append(breeze) #append to check collison
                 breeze.showturtle()
 
             if rooms[y][x].stench > 0:
                 stench = Stench()
                 stench.goto(screen_x + 20, screen_y - 25)
-                stenches.append(stench)
+                stenches.append(stench) #append to check collison
                 stench.showturtle()
-    #Test
-    # for y in range(len(map)):
-    #     for x in range(len(map[y])):
-    #         print("Room: ", (y,x), " has: \n")
-    #         print("PIT: ",rooms[y][x].pit)
-    #         print("\n")
-    #         print("Wumpus: ", rooms[y][x].wumpus)
-    #         print("\n")
-    #         print("Gold: ", rooms[y][x].treasure)
-    #         print("\n")
-    #         print("Breeze: ", rooms[y][x].breeze)
-    #         print("\n")
-    #         print("Stench: ", rooms[y][x].stench)
-    #         print("\n")
-
-    # print("Room: ", (9, 9), " has: \n")
-    # print("PIT: ", rooms[1][1].pit)
-    # print("\n")
-    # print("Wumpus: ", rooms[1][1].wumpus)
-    # print("\n")
-    # print("Gold: ", rooms[1][1].treasure)
-    # print("\n")
-    # print("Breeze: ", rooms[1][1].breeze)
-    # print("\n")
-    # print("Stench: ", rooms[1][1].stench)
-    # print("\n")
 
     wn.listen()
     wn.onkey(player.go_up, "Up")
     wn.onkey(player.go_down, "Down")
     wn.onkey(player.go_left, "Left")
     wn.onkey(player.go_right, "Right")
+
     while(True):
         for pit in pits:
             if player.is_collision(pit):
@@ -377,9 +352,14 @@ def draw_maze(map):
         wn.update()
 
 ################################################################################
+################################################################################
+################################################################################
+################################################################################
 #read file
 t = turtle.Turtle()
-map = read_file("map3.txt")
+map = read_file("map1.txt")
+
+##create instances
 player = Player()
 pits = []
 rooms = []
@@ -390,11 +370,3 @@ wumpuses = []
 
 draw_maze(map)
 turtle.done()
-
-# print(rooms)
-################################################################################
-
-# Keyboard controls
-
-# # Main loop
-# wn.mainloop()
