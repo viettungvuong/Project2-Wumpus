@@ -168,11 +168,13 @@ class Agent:
 
         self.visited_rooms = []
         self.safe_rooms = []
+        self.gold_rooms = []
         self.frontier = []
 
         self.alive = True
 
         self.achieved_golds = 0
+        self.tem_golds = 0
 
         self.kb = kb
 
@@ -261,6 +263,7 @@ class Agent:
             self.points += 100
             self.achieved_golds += 1
             self.kb.remove(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
+            self.gold_rooms.append(self.current_room)
             special = "G"
 
         if (
@@ -401,6 +404,9 @@ class Agent:
         for room in self.visited_rooms:
             self.draw_room(room, "white")
 
+        for room in self.gold_rooms:
+            self.draw_room(room, "yellow")
+
         self.draw_room(self.current_room, "red")
 
         screen.update()  # Update the screen
@@ -426,7 +432,6 @@ class Agent:
             # draw map
             self.draw_map(screen)
             time.sleep(0.5)
-
 
             i += 1
             if self.alive == False:
@@ -487,6 +492,7 @@ class Agent:
 
             move_to = self.move_to(next_room)
             moves.append((next_room, move_to))
+
         print(f"Final points: {self.points}")
 
     def exit_cave(self, moves):
