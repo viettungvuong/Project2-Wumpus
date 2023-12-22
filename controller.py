@@ -89,8 +89,7 @@ turtle.register_shape(gif_gold)
 png_breeze = "./asset/breeze.png"
 gif_breeze = "./asset/breeze.gif"
 img = Image.open(png_breeze)
-img.save(gif_breeze,"GIF")
-# Resize the image
+img.save(gif_breeze, "GIF")# Resize the image
 new_size = (32, 32)  # Set the new size (width, height)
 resized_img = img.resize(new_size)
 # Save the resized image as a GIF
