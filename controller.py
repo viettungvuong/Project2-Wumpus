@@ -84,6 +84,30 @@ resized_img = img.resize(new_size)
 # Save the resized image as a GIF
 resized_img.save(gif_gold, "GIF")
 turtle.register_shape(gif_gold)
+
+#Breeze
+png_breeze = "./asset/breeze.png"
+gif_breeze = "./asset/breeze.gif"
+img = Image.open(png_breeze)
+img.save(gif_breeze,"GIF")
+# Resize the image
+new_size = (32, 32)  # Set the new size (width, height)
+resized_img = img.resize(new_size)
+# Save the resized image as a GIF
+resized_img.save(gif_breeze, "GIF")
+turtle.register_shape(gif_breeze)
+
+#Stench
+png_stench = "./asset/stench.png"
+gif_stench = "./asset/stench.gif"
+img = Image.open(png_stench)
+img.save(gif_stench,"GIF")
+# Resize the image
+new_size = (32, 32)  # Set the new size (width, height)
+resized_img = img.resize(new_size)
+# Save the resized image as a GIF
+resized_img.save(gif_stench, "GIF")
+turtle.register_shape(gif_stench)
 ################################################################################
 
 wn = turtle.Screen()
@@ -121,7 +145,38 @@ class Treasure(turtle.Turtle):
     def destroy(self):
         self.goto(2000,2000)
         self.hideturtle()
+#breeze
+class Breeze(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.shape(gif_breeze)
+        self.penup()
+        self.speed(0)
 
+
+#stench
+class Stench(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.shape(gif_stench)
+        self.penup()
+        self.speed(0)
+    def destroy(self):
+        self.goto(2000,2000)
+        self.hideturtle()
+#wumpus
+class Wumpus(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.shape(gif_wumpus)
+        self.penup()
+        self.speed(0)
+    def destroy(self):
+        self.goto(2000,2000)
+        self.hideturtle()
 #player
 class Player(turtle.Turtle):
     def __init__(self):
@@ -230,6 +285,10 @@ def draw_maze(map):
 
             if character == 'W':
                 room_element.wumpus = True
+                wumpus = Wumpus()
+                wumpus.goto(screen_x + 35, screen_y - 35)
+                wumpuses.append(wumpus)
+                wumpus.showturtle()
 
             room_line.append(room_element)
         rooms.append(room_line)
@@ -249,6 +308,30 @@ def draw_maze(map):
                 if x-1 >= 0: rooms[y][x - 1].stench = True
                 if y+1 < len(map): rooms[y + 1][x].stench = True
                 if y-1 >= 0: rooms[y - 1][x].stench = True
+
+    for y in range(len(map)):
+        for x in range(len(map[y])):
+            if rooms[y][x].breeze == True and (rooms[y][x].pit == True or rooms[y][x].wumpus == True):
+                rooms[y][x].breeze = False
+            if rooms[y][x].stench == True and (rooms[y][x].pit == True or rooms[y][x].wumpus == True):
+                rooms[y][x].stench = False
+
+    for y in range(len(map)):
+        for x in range(len(map[y])):
+            screen_x = -350 + (x * 70)
+            screen_y = 350 - (y * 70)
+            if rooms[y][x].breeze == True:
+                # print("Room", (y, x), "::::", rooms[y][x].breeze)
+                breeze = Breeze()
+                breeze.goto(screen_x + 50, screen_y - 25)
+                breezes.append(breeze)
+                breeze.showturtle()
+
+            if rooms[y][x].stench == True:
+                stench = Stench()
+                stench.goto(screen_x + 20, screen_y - 25)
+                stenches.append(stench)
+                stench.showturtle()
     #Test
     # for y in range(len(map)):
     #     for x in range(len(map[y])):
@@ -289,16 +372,22 @@ def draw_maze(map):
         for treasure in treasures:
             if player.is_collision(treasure):
                 print("Collision with gold")
+                treasures.remove(treasure)
+                treasure.destroy()
+                player.gold += 100
         wn.update()
 
 ################################################################################
 #read file
 t = turtle.Turtle()
-map = read_file("map1.txt")
+map = read_file("map3.txt")
 player = Player()
 pits = []
 rooms = []
 treasures = []
+breezes = []
+stenches = []
+wumpuses = []
 
 draw_maze(map)
 turtle.done()
