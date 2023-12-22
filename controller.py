@@ -54,6 +54,20 @@ img = Image.open(png_agent_down)
 img.save(gif_agent_down,"GIF")
 turtle.register_shape(gif_agent_down)
 
+#Pit
+png_pit = "./asset/pit.png"
+gif_pit = "./asset/pit.gif"
+img = Image.open(png_pit)
+img.save(gif_pit,"GIF")
+turtle.register_shape(gif_pit)
+
+#Wumpus
+png_wumpus = "./asset/wumpus.png"
+gif_wumpus = "./asset/wumpus.gif"
+img = Image.open(png_wumpus)
+img.save(gif_wumpus,"GIF")
+turtle.register_shape(gif_wumpus)
+
 ################################################################################
 
 wn = turtle.Screen()
@@ -63,7 +77,7 @@ wn.setup(800,800)
 
 #room
 class Room():
-    def __init__(self,x,y):
+    def __init__(self, x, y):
         self.x = x
         self.y = y
         self.pit = False
@@ -72,11 +86,21 @@ class Room():
         self.breeze = False
         self.treasure = False
 
+#pit
+class Pit(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.shape(gif_pit)
+        # self.shapesize(stretch_wid=2.56, stretch_len=2.56)
+        self.penup()
+        self.speed(0)
 #player
 class Player(turtle.Turtle):
     def __init__(self):
         turtle.Turtle.__init__(self)
         # self.shape(gif_image_path_agent_right)
+        self.hideturtle()
         self.shape(gif_agent_right)
         # self.color("blue")
         self.shapesize(stretch_wid=2.56, stretch_len=2.56)
@@ -126,7 +150,6 @@ class Player(turtle.Turtle):
 ################################################################################
 
 def draw_maze(map):
-    t = turtle.Turtle()
     # Set line thickness and speed
     t.pensize(4)
     t.speed(0)
@@ -144,7 +167,6 @@ def draw_maze(map):
         t.goto(-350, 350 - i * 70)  # Start at top-left corner
         t.pendown()
         t.goto(350 - (10-len(map))*70, 350 - i * 70)  # Draw across to right
-
     for y in range(len(map)):
         room_line = []
         for x in range(len(map[y])):
@@ -152,15 +174,20 @@ def draw_maze(map):
             screen_x = -350 + (x * 70)
             screen_y = 350 - (y * 70)
             room_element = Room(y,x)
+
             if character == 'A':
                 player.goto(screen_x+35, screen_y-35)
+                player.showturtle()
 
             if character == 'G':
                 room_element.treasure = True
 
             if character == 'P':
+                pit = Pit()
                 room_element.pit = True
-                # print(y,x)
+                pit.goto(screen_x+35, screen_y-35)
+                pits.append(pit)
+                pit.showturtle()
 
             if character == 'W':
                 room_element.wumpus = True
@@ -173,6 +200,7 @@ def draw_maze(map):
     for y in range(len(map)):
         for x in range(len(map[y])):
             if rooms[y][x].pit == True:
+                # rooms[y][x].shape("square")
                 if x+1 < len(map): rooms[y][x+1].breeze = True
                 if x-1 >= 0: rooms[y][x-1].breeze = True
                 if y+1 < len(map): rooms[y+1][x].breeze = True
@@ -214,16 +242,18 @@ def draw_maze(map):
     wn.onkey(player.go_down, "Down")
     wn.onkey(player.go_left, "Left")
     wn.onkey(player.go_right, "Right")
-    turtle.done()
 
 ################################################################################
 #read file
+t = turtle.Turtle()
 map = read_file("map1.txt")
 player = Player()
+pits = []
 rooms = []
 
 
 draw_maze(map)
+turtle.done()
 
 # print(rooms)
 ################################################################################
