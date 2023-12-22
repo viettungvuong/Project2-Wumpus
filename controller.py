@@ -59,6 +59,11 @@ png_pit = "./asset/pit.png"
 gif_pit = "./asset/pit.gif"
 img = Image.open(png_pit)
 img.save(gif_pit,"GIF")
+# Resize the image
+new_size = (40, 40)  # Set the new size (width, height)
+resized_img = img.resize(new_size)
+# Save the resized image as a GIF
+resized_img.save(gif_pit, "GIF")
 turtle.register_shape(gif_pit)
 
 #Wumpus
@@ -68,6 +73,17 @@ img = Image.open(png_wumpus)
 img.save(gif_wumpus,"GIF")
 turtle.register_shape(gif_wumpus)
 
+#Gold
+png_gold = "./asset/gold.png"
+gif_gold = "./asset/gold.gif"
+img = Image.open(png_gold)
+img.save(gif_gold,"GIF")
+# Resize the image
+new_size = (32, 32)  # Set the new size (width, height)
+resized_img = img.resize(new_size)
+# Save the resized image as a GIF
+resized_img.save(gif_gold, "GIF")
+turtle.register_shape(gif_gold)
 ################################################################################
 
 wn = turtle.Screen()
@@ -92,9 +108,20 @@ class Pit(turtle.Turtle):
         turtle.Turtle.__init__(self)
         self.hideturtle()
         self.shape(gif_pit)
-        # self.shapesize(stretch_wid=2.56, stretch_len=2.56)
         self.penup()
         self.speed(0)
+#treasure
+class Treasure(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.shape(gif_gold)
+        self.penup()
+        self.speed(0)
+    def destroy(self):
+        self.goto(2000,2000)
+        self.hideturtle()
+
 #player
 class Player(turtle.Turtle):
     def __init__(self):
@@ -114,7 +141,15 @@ class Player(turtle.Turtle):
         if(move_to_y < 350):
             self.goto(move_to_x, move_to_y)
             self.shape(gif_agent_up)
+    def is_collision(self,target):
+        a = self.xcor() - target.xcor()
+        b = self.ycor() - target.ycor()
 
+        distance = math.sqrt((a**2) + (b**2))
+        if distance < 20:
+            return True
+        else:
+            return False
 
 
     def go_down(self):
@@ -181,6 +216,10 @@ def draw_maze(map):
 
             if character == 'G':
                 room_element.treasure = True
+                gold = Treasure()
+                gold.goto(screen_x+35,screen_y-50)
+                treasures.append(gold)
+                gold.showturtle()
 
             if character == 'P':
                 pit = Pit()
@@ -242,6 +281,15 @@ def draw_maze(map):
     wn.onkey(player.go_down, "Down")
     wn.onkey(player.go_left, "Left")
     wn.onkey(player.go_right, "Right")
+    while(True):
+        for pit in pits:
+            if player.is_collision(pit):
+                print("Collision with pit")
+
+        for treasure in treasures:
+            if player.is_collision(treasure):
+                print("Collision with gold")
+        wn.update()
 
 ################################################################################
 #read file
@@ -250,7 +298,7 @@ map = read_file("map1.txt")
 player = Player()
 pits = []
 rooms = []
-
+treasures = []
 
 draw_maze(map)
 turtle.done()
