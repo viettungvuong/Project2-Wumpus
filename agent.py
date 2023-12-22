@@ -119,8 +119,6 @@ class Map:
                             moves = self.map[i][j].surrounding_rooms
                             for move in moves:
                                 kb.add_sentence(Atomic(f"S{move[0]},{move[1]}"))
-                        # else:
-                        #     kb.add_sentence(Not(Atomic(f"W{i},{j}")))
 
                         if line_split[j].__contains__("P"):
                             # kb.add_sentence(Atomic(f"P{i},{j}"))
@@ -128,8 +126,10 @@ class Map:
                             moves = self.map[i][j].surrounding_rooms
                             for move in moves:
                                 kb.add_sentence(Atomic(f"B{move[0]},{move[1]}"))
-                        # else:
-                        #     kb.add_sentence(Not(Atomic(f"P{i},{j}")))
+
+                        # self.map[i][j].relationship(
+                        #     kb
+                        # )  # add relationship between rooms
 
                 agent = Agent(self.map[agent_pos[0]][agent_pos[1]], kb)
                 agent.kb = kb
@@ -243,6 +243,9 @@ class Agent:
                     for r in map.get_room(x, y).surrounding_rooms
                 )
 
+            else:
+                print(f"Nothing happened at ({x}, {y})")
+
     def percept(self):
         special = None
 
@@ -250,17 +253,12 @@ class Agent:
             self.points -= 10000
             self.alive = False
             print(f"You died at {self.current_room} - {self.current_room.parent}")
-            return (
-                "W"
-                if self.kb.check(
-                    Atomic(f"W{self.current_room.x},{self.current_room.y}")
-                )
-                else "P"
-            )
+            return "Died"
 
         if self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}")):
             self.points += 1000
             self.achieved_golds += 1
+            print(f"Collected gold at {self.current_room}")
             self.kb.remove(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
             special = "G"
 
@@ -268,44 +266,21 @@ class Agent:
             self.kb.check(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
             == False
         ):  # if not breeze then cannot be pit
+            # self.kb.add_sentence(
+            #     Not(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
+            # )
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"P{r[0]},{r[1]}")))
-
-        elif (
-            self.kb.check(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
-            == True
-        ):  # if not breeze then cannot be pit
-            disjunction = None
-            for r in self.current_room.surrounding_rooms:
-                if disjunction is None:
-                    disjunction = Atomic(f"P{r[0]},{r[1]}")
-                else:
-                    disjunction = Or(disjunction, Atomic(f"P{r[0]},{r[1]}"))
-
-            self.kb.add_sentence(disjunction)
 
         if (
             self.kb.check(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
             == False
         ):  # if not stench then cannmot be wumpus
+            # self.kb.add_sentence(
+            #     Not(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
+            # )
             for r in self.current_room.surrounding_rooms:
                 self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
-        elif (
-            self.kb.check(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
-            == True
-        ):
-            disjunction = None
-            for r in self.current_room.surrounding_rooms:
-                if disjunction is None:
-                    disjunction = Atomic(f"W{r[0]},{r[1]}")
-                else:
-                    disjunction = Or(disjunction, Atomic(f"W{r[0]},{r[1]}"))
-
-            self.kb.add_sentence(disjunction)
-
-        # map.get_room(self.current_room.x, self.current_room.y).relationship(self.kb)
-
-        self.current_room.relationship(self.kb)
 
         return special
 
@@ -317,26 +292,15 @@ class Agent:
             if (
                 considering_room not in self.visited_rooms
                 and considering_room not in self.frontier
-                and (self.kb.check(Atomic(f"P{r[0]},{r[1]}")) == False)
-                or (self.kb.forward_chaining(Not(Atomic(f"P{r[0]},{r[1]}"))) == True)
             ):
                 considering_room.parent = current_room
                 self.frontier.append(considering_room)
 
     def find_safe(self):
         for room in self.frontier:
-            check_wumpus = Atomic(f"W{room.x},{room.y}")
-            check_pit = Atomic(f"P{room.x},{room.y}")
-
-            if self.kb.check(Not(check_wumpus)) and self.kb.check(Not(check_pit)):
-                if room not in self.safe_rooms and room not in self.visited_rooms:
-                    self.safe_rooms.append(room)
-                    continue
-
             if self.check_safe(room) == True:
                 if room not in self.safe_rooms and room not in self.visited_rooms:
                     self.safe_rooms.append(room)
-                    continue
 
     # def moves_trace(self, moves):
     #     moves_copy = []
@@ -397,14 +361,10 @@ class Agent:
         check_wumpus = Atomic(f"W{room.x},{room.y}")
         check_pit = Atomic(f"P{room.x},{room.y}")
 
-        # if self.kb.forward_chaining(check_wumpus) or self.kb.forward_chaining(check_pit):
-        #     # print(f"Found wumpus or pit at {room} - {room.parent}")
-        #     return False
-
-        if self.kb.forward_chaining(Not(check_wumpus)) and self.kb.forward_chaining(
-            Not(check_pit)
+        if (
+            self.kb.resolution(Not(check_wumpus)) == True
+            and self.kb.resolution(Not(check_pit)) == True
         ):
-            # print(f"Not found wumpus or pit at {room} - {room.parent}")
             return True
 
         return False
@@ -412,6 +372,8 @@ class Agent:
     def solve(self):
         i = 0
         moves = [(self.current_room, "Start")]
+        met_wumpus_rooms = set()
+
         while self.alive:
             print(f"Current room: {self.current_room} - {self.current_room.parent}")
             i += 1
@@ -429,14 +391,14 @@ class Agent:
             # for r in self.current_room.surrounding_rooms:
             #     if (
             #         self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
-            #         or self.kb.forward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
+            #         or self.kb.dpll(Atomic(f"W{r[0]},{r[1]}")) == True
             #     ):
             #         self.shoot(map.get_room(r[0], r[1]))  # shoot wumpus
             #         print(f"Shoot wumpus at ({r[0]}, {r[1]})")
 
             #     if (
             #         self.kb.check(Atomic(f"P{r[0]},{r[1]}")) == False
-            #         and self.kb.forward_chaining(Atomic(f"P{r[0]},{r[1]}"))
+            #         and self.kb.dpll(Atomic(f"P{r[0]},{r[1]}"))
             #         == False
             #     ):
             #         if map.get_room(r[0], r[1]) in self.visited_rooms:
@@ -488,20 +450,23 @@ class Agent:
                         continue
 
                     if room.wumpus == True:
+                        met_wumpus_rooms.add(room)
                         if len(self.frontier) == 1:
                             self.shoot(room)
                             print(f"Shoot wumpus at ({r[0]}, {r[1]})")
                         else:
                             continue
+                    else:
+                        self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
 
                     next_room = room
                     self.frontier.pop(i)
-                    self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
+
                     self.kb.add_sentence(Not(Atomic(f"P{r[0]},{r[1]}")))
                     break
 
             if next_room is None:  # xong hết rồi
-                # self.exit_cave(moves)
+                self.exit_cave(moves)
                 # moves = self.moves_trace(moves)
                 # for room in moves:
                 #     print(
@@ -527,6 +492,7 @@ class Agent:
         print("Finding cave exit...")
 
         while current_room is None or not (current_room.x == 0 and current_room.y == 0):
+            print(f"Current room: {current_room} - {current_room.parent}")
             next_room = None
             shot_wumpus = False
 
@@ -557,19 +523,20 @@ class Agent:
                 room = self.frontier[index_pop]
                 r = (room.x, room.y)
 
-                if (
-                    self.kb.check(Atomic(f"W{r[0]},{r[1]}"))
-                    or self.kb.forward_chaining(Atomic(f"W{r[0]},{r[1]}")) == True
-                ):  # chỉ nên shoot khi len = 1
+                if self.frontier[index_pop].pit == True:
+                    self.frontier.pop(index_pop)
+                    continue
+
+                if self.frontier[index_pop].wumpus == True:  # chỉ nên shoot khi len = 1
                     self.shoot(self.frontier[index_pop])  # shoot wumpus
                     shot_wumpus = True
 
                 if next_room is None:
                     next_room = self.frontier.pop(index_pop)
                 else:
-                    if map.heuristic(
-                        self.frontier[index_pop], map.get_room(0, 0)
-                    ) < map.heuristic(next_room, map.get_room(0, 0)):
+                    if map.heuristic(room, map.get_room(0, 0)) < map.heuristic(
+                        next_room, map.get_room(0, 0)
+                    ):
                         next_room = self.frontier.pop(index_pop)
                 # print(f"Chosen room: {next_room}")
                 # print(f"Visited: {next_room in self.visited_rooms}")

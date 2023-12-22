@@ -241,3 +241,78 @@ class Atomic(Formula):
 
     def count_symbols(self):
         return 1
+
+
+class FUNCTION:
+    def __init__(self, formula, args):
+        self.formula = formula
+        self.args = args
+
+    def MGU(self, other):
+        if not isinstance(other, FUNCTION):
+            return None
+        if self.formula != other.formula:
+            return None
+        if len(self.args) != len(other.args):
+            return None
+
+        result = {}
+        for i in range(len(self.args)):
+            if isinstance(self.args[i], FUNCTION) and isinstance(
+                other.args[i], FUNCTION
+            ):
+                sub = self.args[i].MGU(other.args[i])
+                if sub is None:
+                    return None
+                for key in sub:
+                    if key in result:
+                        if result[key] != sub[key]:
+                            return None
+                    else:
+                        result[key] = sub[key]
+            elif isinstance(self.args[i], FUNCTION) or isinstance(
+                other.args[i], FUNCTION
+            ):
+                return None
+            else:
+                if self.args[i] != other.args[i]:
+                    return None
+        return result
+
+
+def resolution(KB, alpha):
+    clauses = KB.clauses + alpha.clauses
+    new = set()
+
+    while True:
+        n = len(clauses)
+        pairs = [(clauses[i], clauses[j]) for i in range(n) for j in range(i + 1, n)]
+
+        for ci, cj in pairs:
+            resolvents = resolve(ci, cj)
+            if resolvents is None:
+                continue
+            if not resolvents:
+                return True
+            new.update(resolvents)
+
+        if new.issubset(clauses):
+            return False
+
+        clauses.update(new)
+
+    return False
+
+
+def resolve(ci, cj):
+    resolvents = set()
+
+    for di in ci:
+        for dj in cj:
+            if di == ~dj:
+                resolvent = (ci - {di}) | (cj - {dj})
+                if not resolvent:
+                    return set()
+                resolvents.add(resolvent)
+
+    return resolvents
