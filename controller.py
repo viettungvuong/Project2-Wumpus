@@ -22,9 +22,40 @@ def read_file(filename):
 # print(read_file("map2.txt"))
 
 ################################################################################
-
+#input game asset
 import turtle
 import math
+from PIL import Image
+#agent right
+png_agent_right = "./asset/agent_right.png"
+gif_agent_right = "./asset/agent_right.gif"
+img = Image.open(png_agent_right)
+img.save(gif_agent_right,"GIF")
+turtle.register_shape(gif_agent_right)
+
+#agent left
+png_agent_left = "./asset/agent_left.png"
+gif_agent_left = "./asset/agent_left.gif"
+img = Image.open(png_agent_left)
+img.save(gif_agent_left,"GIF")
+turtle.register_shape(gif_agent_left)
+
+#agent up
+png_agent_up = "./asset/agent_up.png"
+gif_agent_up = "./asset/agent_up.gif"
+img = Image.open(png_agent_up)
+img.save(gif_agent_up,"GIF")
+turtle.register_shape(gif_agent_up)
+
+#agent down
+png_agent_down = "./asset/agent_down.png"
+gif_agent_down = "./asset/agent_down.gif"
+img = Image.open(png_agent_down)
+img.save(gif_agent_down,"GIF")
+turtle.register_shape(gif_agent_down)
+
+################################################################################
+
 wn = turtle.Screen()
 wn.bgcolor("white")
 wn.title("A maze game")
@@ -46,8 +77,8 @@ class Player(turtle.Turtle):
     def __init__(self):
         turtle.Turtle.__init__(self)
         # self.shape(gif_image_path_agent_right)
-        self.shape("square")
-        self.color("blue")
+        self.shape(gif_agent_right)
+        # self.color("blue")
         self.shapesize(stretch_wid=2.56, stretch_len=2.56)
         self.penup()
         self.gold = 0
@@ -58,6 +89,8 @@ class Player(turtle.Turtle):
         # if(move_to_x,move_to_y) not in walls:
         if(move_to_y < 350):
             self.goto(move_to_x, move_to_y)
+            self.shape(gif_agent_up)
+
 
 
     def go_down(self):
@@ -66,7 +99,8 @@ class Player(turtle.Turtle):
 
         # if (move_to_x, move_to_y) not in walls:
         if(move_to_y > -350):
-         self.goto(move_to_x, move_to_y)
+            self.shape(gif_agent_down)
+            self.goto(move_to_x, move_to_y)
 
 
     def go_left(self):
@@ -75,6 +109,7 @@ class Player(turtle.Turtle):
 
         # if (move_to_x, move_to_y) not in walls:
         if(move_to_x > -350):
+            self.shape(gif_agent_left)
             self.goto(move_to_x, move_to_y)
 
 
@@ -85,6 +120,7 @@ class Player(turtle.Turtle):
 
         # if (move_to_x, move_to_y) not in walls:
         if( move_to_x < 350):
+            self.shape(gif_agent_right)
             self.goto(move_to_x, move_to_y)
 
 ################################################################################
