@@ -392,22 +392,22 @@ class Agent:
         turtle.hideturtle()  # Hide the turtle cursor
         screen.tracer(0)  # Turn off automatic screen updates
 
-        # Draw safe rooms in red
-        for room in self.safe_rooms:
-            self.draw_room(room, "red")
-
-        # Draw frontier rooms in grey
         for room in self.frontier:
             self.draw_room(room, "grey")
 
-        # Draw the current room in red
+        for room in self.safe_rooms:
+            self.draw_room(room, "white")
+
+        for room in self.visited_rooms:
+            self.draw_room(room, "white")
+
         self.draw_room(self.current_room, "red")
 
         screen.update()  # Update the screen
 
     def draw_room(self, room, color):
         turtle.penup()
-        turtle.goto(room.x * 20, room.y * 20)  # Adjust the scaling factor as needed
+        turtle.goto(room.y * 20,200- room.x * 20)  # Adjust the scaling factor as needed
         turtle.pendown()
         turtle.begin_fill()
         turtle.color(color)
@@ -420,7 +420,8 @@ class Agent:
         i = 0
         moves = [(self.current_room, "Start")]
         screen = turtle.Screen()
-        screen.setup(width=600, height=600)
+        screen.setup(width=800, height=800)
+        screen.bgcolor("black")
         while self.alive:
             # draw map
             self.draw_map(screen)
