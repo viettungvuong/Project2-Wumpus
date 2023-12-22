@@ -1,4 +1,4 @@
-from logic import Not, And, Or, If, Iff, Atomic
+from logic import Not, And, Or, If, Iff, Atomic, Formula, Operator
 
 
 class KB:
@@ -19,6 +19,11 @@ class KB:
     def toCnf(self):
         result = []
         for sentence in self.sentences:
+            if (
+                isinstance(sentence, Formula) == False
+                and isinstance(sentence, Operator) == False
+            ):
+                continue
             result.append(sentence.toCNF())
             # print(result[-1])
         return result
@@ -26,6 +31,9 @@ class KB:
     def forward_chaining(self, q):
         if self.check(q):
             return True
+
+        if self.check(Not(q)):
+            return False
 
         count = {}  # number of premises of each implication
         inferred = {}
@@ -86,11 +94,11 @@ class KB:
                                 agenda.append(sentence.left)
         return False
 
-    def resolution(kb, query):
-        if kb.check(query):
+    def resolution(self, query):
+        if self.check(query):
             return True
 
-        if kb.check(Not(query)):
+        if self.check(Not(query)):
             return False
 
         def resolve(clause1, clause2):
@@ -111,14 +119,15 @@ class KB:
                         if str(l) != str(negated_literal)
                     ]
 
-                    if not new_clause:
-                        return frozenset(), resolved
+                    if not new_clause or len(new_clause) == 0:
+                        resolvents.update(frozenset())
+                        break
 
                     resolvents.update(frozenset(new_clause))
 
             return resolvents, resolved
 
-        clauses = kb.toCnf()
+        clauses = self.toCnf()
         query = query.toCNF()
         clauses.append(Not(query).toCNF())
 
@@ -135,7 +144,7 @@ class KB:
 
                     resolvents, resolved = resolve(clauses[i], clauses[j])
                     if resolved:
-                        if len(resolvents) == 0 or frozenset() in resolvents:
+                        if len(resolvents) == 0:
                             return True
                         new.extend(resolvents)
 

@@ -56,9 +56,9 @@ class Formula:
 
             # Convert implications and biconditionals to CNF equivalents
             if isinstance(s, If):
-                return OR(NOT(s.left), s.right)
+                return Or(Not(s.left), s.right)
             elif isinstance(s, Iff):
-                return AND(OR(NOT(s.left), s.right), OR(NOT(s.right), s.left))
+                return And(Or(Not(s.left), s.right), Or(Not(s.right), s.left))
             return s
 
         def not_inside(s):
@@ -69,9 +69,9 @@ class Formula:
                     return not_inside(a.child)
                 if isinstance(a, And) or isinstance(a, Or):
                     if isinstance(a, And):
-                        x = OR(NOT(a.left), NOT(a.right))
+                        x = Or(Not(a.left), Not(a.right))
                     else:
-                        x = AND(NOT(a.left), NOT(a.right))
+                        x = And(Not(a.left), Not(a.right))
                     x.left = not_inside(x.left)
                     x.right = not_inside(x.right)
                     return x
@@ -85,9 +85,9 @@ class Formula:
 
             if isinstance(s, Or):
                 if isinstance(s.right, And):
-                    s = AND(OR(s.left, s.right.left), OR(s.left, s.right.right))
+                    s = And(Or(s.left, s.right.left), Or(s.left, s.right.right))
                 elif isinstance(s.left, And):
-                    s = AND(OR(s.right, s.left.left), OR(s.right, s.left.right))
+                    s = And(Or(s.right, s.left.left), Or(s.right, s.left.right))
             return s
 
         q = self
