@@ -495,7 +495,7 @@ class Agent:
                     break
 
             if next_room is None:  # xong hết rồi
-                # self.exit_cave(moves)
+                self.exit_cave(moves)
                 # moves = self.moves_trace(moves)
                 # for room in moves:
                 #     print(
@@ -525,15 +525,15 @@ class Agent:
             next_room = None
             shot_wumpus = False
 
-            # if len(self.safe_rooms) > 0:
-            #     self.safe_rooms = sorted(
-            #         self.safe_rooms,
-            #         key=lambda x: map.heuristic(
-            #             x, map.get_room(0, 0)
-            #         ),  # nhớ chỉnh index để 0, 0 thành 1, 1
-            #     )
+            if len(self.safe_rooms) > 0:
+                self.safe_rooms = sorted(
+                    self.safe_rooms,
+                    key=lambda x: map.heuristic(
+                        x, map.get_room(0, 0)
+                    ),  # nhớ chỉnh index để 0, 0 thành 1, 1
+                )
 
-            #     next_room = self.safe_rooms.pop(0)
+                next_room = self.safe_rooms.pop(0)
 
             # else:
             self.frontier = sorted(
@@ -552,18 +552,25 @@ class Agent:
             room = self.frontier[index_pop]
 
             if room.wumpus == True:  # chỉ nên shoot khi len = 1
-                # if len(self.frontier) == 1:
-                #     self.shoot(self.frontier[index_pop])  # shoot wumpus
-                #     shot_wumpus = True
-                # else:
-                index_pop += 1
-                continue
+                if len(self.frontier) == 1:
+                    self.shoot(self.frontier[index_pop])  # shoot wumpus
+                    shot_wumpus = True
+                else:
+                    index_pop += 1
+                    continue
 
             if self.check_safe(room) == False or room in self.visited_rooms:
                 index_pop += 1
                 continue
 
-            next_room = self.frontier.pop(index_pop)
+            get_room = self.frontier[index_pop]
+
+            if next_room is not None:
+                if map.heuristic(get_room, map.get_room(0, 0)) > map.heuristic(
+                    next_room, map.get_room(0, 0)
+                ):
+                    next_room = get_room
+                    self.frontier.pop(index_pop)
             # print(f"Chosen room: {next_room}")
             # print(f"Visited: {next_room in self.visited_rooms}")
 
@@ -608,7 +615,7 @@ class Agent:
 
 
 map = Map()
-# agent = map.random_map()
-agent = map.read_map("map3.txt")
+agent = map.random_map()
+# agent = map.read_map("map3.txt")
 if agent is not None:
     agent.solve()
