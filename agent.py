@@ -495,7 +495,7 @@ class Agent:
                     break
 
             if next_room is None:  # xong hết rồi
-                self.exit_cave(moves)
+                # self.exit_cave(moves)
                 # moves = self.moves_trace(moves)
                 # for room in moves:
                 #     print(
@@ -559,17 +559,27 @@ class Agent:
                     index_pop += 1
                     continue
 
-            if self.check_safe(room) == False or room in self.visited_rooms:
+            if room in self.visited_rooms:
                 index_pop += 1
                 continue
 
-            get_room = self.frontier[index_pop]
+            if room.pit == True:
+                index_pop += 1
+                continue
+
+            if room.wumpus == True:
+                if len(self.frontier) == 1:
+                    self.shoot(room)
+                    print(f"Shoot wumpus at ({room.x}, {room.y})")
+                else:
+                    index_pop += 1
+                    continue
 
             if next_room is not None:
-                if map.heuristic(get_room, map.get_room(0, 0)) > map.heuristic(
+                if map.heuristic(room, map.get_room(0, 0)) > map.heuristic(
                     next_room, map.get_room(0, 0)
                 ):
-                    next_room = get_room
+                    next_room = room
                     self.frontier.pop(index_pop)
             # print(f"Chosen room: {next_room}")
             # print(f"Visited: {next_room in self.visited_rooms}")
