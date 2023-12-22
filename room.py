@@ -34,42 +34,42 @@ class Room:
     def __hash__(self) -> int:
         return hash((self.x, self.y))
 
-    # def relationship(self, kb):
-    #     # relationship pit breeze
-    #     left = Atomic(f"B{self.x},{self.y}")
-    #     right = None
-    #     for r in self.surrounding_rooms:
-    #         if right is None:
-    #             right = Atomic(f"P{r[0]},{r[1]}")
-    #         else:
-    #             right = Or(right, Atomic(f"P{r[0]},{r[1]}"))
-    #     kb.add_sentence(If(left, right))
+    def relationship(self, kb):
+        # relationship pit breeze
+        left = Atomic(f"B{self.x},{self.y}")
+        right = None
+        for r in self.surrounding_rooms:
+            if right is None:
+                right = Atomic(f"P{r[0]},{r[1]}")
+            else:
+                right = Or(right, Atomic(f"P{r[0]},{r[1]}"))
+        kb.add_sentence(If(left, right))
 
-    #     # left = Atomic(f"P{self.x},{self.y}")
-    #     # right = None
-    #     # for r in self.surrounding_rooms:
-    #     #     if right is None:
-    #     #         right = Atomic(f"B{r[0]},{r[1]}")
-    #     #     else:
-    #     #         right = And(right, Atomic(f"B{r[0]},{r[1]}"))
-    #     # kb.add_sentence(Iff(left, right))
+        left = Atomic(f"P{self.x},{self.y}")
+        right = None
+        for r in self.surrounding_rooms:
+            if right is None:
+                right = Atomic(f"B{r[0]},{r[1]}")
+            else:
+                right = And(right, Atomic(f"B{r[0]},{r[1]}"))
+        kb.add_sentence(Iff(left, right))
 
-    #     # relationship stench wumpus
-    #     left = Atomic(f"S{self.x},{self.y}")
-    #     right = None
-    #     for r in self.surrounding_rooms:
-    #         if right is None:
-    #             right = Atomic(f"W{r[0]},{r[1]}")
-    #         else:
-    #             right = Or(right, Atomic(f"W{r[0]},{r[1]}"))
-    #     kb.add_sentence(If(left, right))
+        # relationship stench wumpus
+        left = Atomic(f"S{self.x},{self.y}")
+        right = None
+        for r in self.surrounding_rooms:
+            if right is None:
+                right = Atomic(f"W{r[0]},{r[1]}")
+            else:
+                right = Or(right, Atomic(f"W{r[0]},{r[1]}"))
+        kb.add_sentence(If(left, right))
 
-    #     # if there is wumpus in a room, there is stench in surrounding rooms
-    #     # left = Atomic(f"W{self.x},{self.y}")
-    #     # right = None
-    #     # for r in self.surrounding_rooms:
-    #     #     if right is None:
-    #     #         right = Atomic(f"S{r[0]},{r[1]}")
-    #     #     else:
-    #     #         right = And(right, Atomic(f"S{r[0]},{r[1]}"))
-    #     # kb.add_sentence(Iff(left, right))
+        # if there is wumpus in a room, there is stench in surrounding rooms
+        left = Atomic(f"W{self.x},{self.y}")
+        right = None
+        for r in self.surrounding_rooms:
+            if right is None:
+                right = Atomic(f"S{r[0]},{r[1]}")
+            else:
+                right = And(right, Atomic(f"S{r[0]},{r[1]}"))
+        kb.add_sentence(Iff(left, right))
