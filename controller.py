@@ -121,8 +121,8 @@ class Room():
         self.y = y
         self.pit = False
         self.wumpus = False
-        self.stench = False
-        self.breeze = False
+        self.stench = 0
+        self.breeze = 0
         self.treasure = False
 
 #pit
@@ -298,35 +298,35 @@ def draw_maze(map):
         for x in range(len(map[y])):
             if rooms[y][x].pit == True:
                 # rooms[y][x].shape("square")
-                if x+1 < len(map): rooms[y][x+1].breeze = True
-                if x-1 >= 0: rooms[y][x-1].breeze = True
-                if y+1 < len(map): rooms[y+1][x].breeze = True
-                if y-1 >= 0: rooms[y-1][x].breeze = True
+                if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x+1].breeze = rooms[y][x+1].breeze + 1
+                if x-1 >= 0 and rooms[y][x-1].pit == False: rooms[y][x-1].breeze += 1
+                if y+1 < len(map) and rooms[y+1][x].pit == False: rooms[y+1][x].breeze += 1
+                if y-1 >= 0 and rooms[y-1][x].pit == False: rooms[y-1][x].breeze += 1
             if rooms[y][x].wumpus == True:
-                if x+1 < len(map): rooms[y][x + 1].stench = True
-                if x-1 >= 0: rooms[y][x - 1].stench = True
-                if y+1 < len(map): rooms[y + 1][x].stench = True
-                if y-1 >= 0: rooms[y - 1][x].stench = True
+                if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x + 1].stench += 1
+                if x-1 >= 0 and rooms[y][x - 1].pit == False: rooms[y][x - 1].stench += 1
+                if y+1 < len(map) and rooms[y + 1][x].pit == False: rooms[y + 1][x].stench += 1
+                if y-1 >= 0 and rooms[y - 1][x].pit == False: rooms[y - 1][x].stench += 1
 
-    for y in range(len(map)):
-        for x in range(len(map[y])):
-            if rooms[y][x].breeze == True and (rooms[y][x].pit == True or rooms[y][x].wumpus == True):
-                rooms[y][x].breeze = False
-            if rooms[y][x].stench == True and (rooms[y][x].pit == True or rooms[y][x].wumpus == True):
-                rooms[y][x].stench = False
+    # for y in range(len(map)):
+    #     for x in range(len(map[y])):
+    #         if rooms[y][x].breeze == True and (rooms[y][x].pit == True or rooms[y][x].wumpus == True):
+    #             rooms[y][x].breeze = False
+    #         if rooms[y][x].stench == True and (rooms[y][x].pit == True or rooms[y][x].wumpus == True):
+    #             rooms[y][x].stench = False
 
     for y in range(len(map)):
         for x in range(len(map[y])):
             screen_x = -350 + (x * 70)
             screen_y = 350 - (y * 70)
-            if rooms[y][x].breeze == True:
+            if rooms[y][x].breeze > 0:
                 # print("Room", (y, x), "::::", rooms[y][x].breeze)
                 breeze = Breeze()
                 breeze.goto(screen_x + 50, screen_y - 25)
                 breezes.append(breeze)
                 breeze.showturtle()
 
-            if rooms[y][x].stench == True:
+            if rooms[y][x].stench > 0:
                 stench = Stench()
                 stench.goto(screen_x + 20, screen_y - 25)
                 stenches.append(stench)
