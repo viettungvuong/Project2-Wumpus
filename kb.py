@@ -1,9 +1,13 @@
-from logic import Not, And, Or, If, Iff, Atomic
+from logic import Not, And, Or, If, Iff, Atomic, Formula, Operator
 
 
 class KB:
     def __init__(self):
         self.sentences = []
+
+    def print(self):
+        for s in self.sentences:
+            print(s)
 
     def add_sentence(self, sentence):
         self.sentences.append(sentence)
@@ -19,94 +23,231 @@ class KB:
     def toCnf(self):
         result = []
         for sentence in self.sentences:
-            result.append(sentence.toCnf())
+            if (
+                isinstance(sentence, Formula) == False
+                and isinstance(sentence, Operator) == False
+            ):
+                continue
+            result.append(sentence.toCNF())
+            # print(result[-1])
         return result
 
-    def backward_chaining(self, q):
+    def forward_chaining(self, q):
         if self.check(q):
             return True
 
-        if isinstance(q, Not):
-            return not self.backward_chaining(q.child)
+        if self.check(Not(q)):
+            return False
 
-        if isinstance(q, And):
-            return self.backward_chaining(q.left) and self.backward_chaining(q.right)
-
-        if isinstance(q, Or):
-            return self.backward_chaining(q.left) or self.backward_chaining(q.right)
+        count = {}  # number of premises of each implication
+        inferred = {}
 
         for sentence in self.sentences:
-            if isinstance(sentence, Iff):
-                if str(sentence.left) == str(q):
-                    return self.backward_chaining(sentence.right)
-                elif str(sentence.right) == str(
-                    q
-                ):  # nếu trong câu implies mà q nằm ở vế phải (được suy ra)
-                    return self.backward_chaining(sentence.left)
-
+            if isinstance(sentence, Atomic) or (
+                isinstance(sentence, Not) and isinstance(sentence.child, Atomic)
+            ):
+                count[str(sentence)] = 0
+                inferred[str(sentence)] = False
             elif isinstance(sentence, If):
-                if str(sentence.right) == str(q):
-                    return self.backward_chaining(sentence.left)
+                if isinstance(sentence.left, And):
+                    count[str(sentence.right)] = len(sentence.left.get_literals())
+                elif isinstance(sentence.left, Or):
+                    count[str(sentence.right)] = 1
+                inferred[str(sentence.right)] = False
+            elif isinstance(sentence, Iff):
+                if isinstance(sentence.left, And):
+                    count[str(sentence.right)] = len(sentence.left.get_literals())
+                elif isinstance(sentence.left, Or):
+                    count[str(sentence.right)] = 1
+                inferred[str(sentence.right)] = False
+
+                if isinstance(sentence.right, And):
+                    count[str(sentence.left)] = len(sentence.right.get_literals())
+                elif isinstance(sentence.right, Or):
+                    count[str(sentence.left)] = 1
+                inferred[str(sentence.left)] = False
+
+        agenda = []  # list of symbols known to be true
+
+        for sentence in self.sentences:
+            if isinstance(sentence, Atomic) or (
+                isinstance(sentence, Not) and isinstance(sentence.child, Atomic)
+            ):
+                agenda.append(sentence)
+
+        while len(agenda) > 0:
+            p = agenda.pop(0)  # pop a symbol p
+            if str(p) == str(q):  # if p is the query symbol
+                return True  # return true
+            if (
+                inferred.get(str(p)) is None or inferred[str(p)] == False
+            ):  # if p is not inferred yet
+                inferred[str(p)] = True  # mark p as inferred
+                for sentence in self.sentences:  # for each sentence in KB
+                    if isinstance(sentence, If):  # if sentence is an implication
+                        if str(sentence.left) == str(
+                            p
+                        ):  # if p is the premise of the implication
+                            count[
+                                str(sentence.right)
+                            ] -= 1  # decrease the number of premises of the implication
+                            if (
+                                count[str(sentence.right)] == 0
+                            ):  # if all premises of the implication are true
+                                agenda.append(
+                                    sentence.right
+                                )  # add the conclusion to the agenda (true)
+                    elif isinstance(sentence, Iff):
+                        if str(sentence.left) == str(p):
+                            count[str(sentence.right)] -= 1
+                            if count[str(sentence.right)] == 0:
+                                agenda.append(sentence.right)
+                        elif str(sentence.right) == str(p):
+                            count[str(sentence.left)] -= 1
+                            if count[str(sentence.left)] == 0:
+                                agenda.append(sentence.left)
 
         return False
 
-    def resolution(self, alpha):
-        def disjunction_clauses(or_clause):
-            if isinstance(or_clause, Atomic) or isinstance(or_clause, Not):
-                return [or_clause]
+    def resolution(self, query):
+        if self.check(query):
+            return True
 
-            if not isinstance(or_clause, Or):
-                return None
+        if self.check(Not(query)):
+            return False
 
-            res = []
-            if isinstance(or_clause.left, Or):
-                res += disjunction_clauses(or_clause.left)
-            else:
-                res.append(or_clause.left)
+        def resolve(clause1, clause2):  # resolve clause 1 và clause 2
+            resolvents = set()
+            resolved = False
 
-            if isinstance(or_clause.right, Or):
-                res += disjunction_clauses(or_clause.right)
-            else:
-                res.append(or_clause.right)
+            for literal in clause1.get_literals():
+                negated_literal = Not(literal)
 
-            return res
+                if str(negated_literal) in [str(l) for l in clause2.get_literals()]:
+                    # nếu gặp 2 literal đối nhau
+                    resolved = True
+
+                    new_clause = [
+                        l for l in clause1.get_literals() if str(l) != str(literal)
+                    ] + [
+                        l
+                        for l in clause2.get_literals()
+                        if str(l) != str(negated_literal)
+                    ]
+
+                    if len(new_clause) == 0:
+                        break
+
+                    resolvents.update(frozenset(new_clause))
+
+            return resolvents, resolved
 
         clauses = self.toCnf()
-        clauses.append(Not(alpha).toCNF())  # add not alpha to clauses
+        query = query.toCNF()
+        clauses.append(Not(query).toCNF())
 
-        new = set()
+        # print([str(c) for c in clauses])
+
+        new = []
+
         while True:
             n = len(clauses)
-            pairs = [
-                (clauses[i], clauses[j]) for i in range(n) for j in range(i + 1, n)
-            ]  # traverse through pairs of clauses
 
-            for clauseA, clauseB in pairs:
-                clauses_fromA = disjunction_clauses(clauseA)
-                clauses_fromB = disjunction_clauses(clauseB)
+            for i in range(n):
+                for j in range(i + 1, n):
+                    resolvents, resolved = resolve(clauses[i], clauses[j])
+                    if resolved:
+                        if len(resolvents) == 0:  # KB and negation q unsatisfiable
+                            # print(str(clauses[i]) + " " + str(clauses[j]))
+                            return True
+                        new.extend(resolvents)
 
-                if clauses_fromA is None or clauses_fromB is None:
-                    continue
+            if set(new).issubset(set(clauses)):
+                return False
 
-                for cA in clauses_fromA:
-                    for cB in clauses_fromB:
-                        if cA == Not(cB) or Not(cA) == cB:  # if cA and cB are opposite
-                            clauses.remove(clauseA)
-                            clauses.remove(clauseB)
-                            resolvents = [
-                                c
-                                for c in clauses_fromA + clauses_fromB
-                                if c != cA and c != cB
-                            ]
-                            new_clause = None
-                            for r in resolvents:
-                                if new_clause is None:
-                                    new_clause = r
-                                else:
-                                    new_clause = Or(new_clause, r)
+            clauses.extend(new)
 
-                            clauses.append(new_clause)
+    def dpll_satisfiable(self, query):
+        if self.check(query):
+            return True
 
-            if len(clauses) == 0 or clauses[0] is None:
-                return True  # satisfiable
+        if self.check(Not(query)):
             return False
+
+        def unit_propagate(clauses, model):
+            while True:
+                unit_clauses = [c for c in clauses if len(c.get_literals()) == 1]
+                if len(unit_clauses) == 0:
+                    break
+                for clause in unit_clauses:
+                    literal = list(clause.get_literals())[0]
+                    clauses = [
+                        c
+                        for c in clauses
+                        if str(literal) not in [str(l) for l in c.get_literals()]
+                    ]
+                    model[str(literal)] = True
+                    clauses = [
+                        c
+                        for c in clauses
+                        if str(Not(literal)) not in [str(l) for l in c.get_literals()]
+                    ]
+                    model[str(Not(literal))] = False
+            return clauses, model
+
+        def pure_symbol(clauses):
+            symbols = set()
+            for clause in clauses:
+                for literal in clause.get_literals():
+                    symbols.add(str(literal))
+            pure_symbols = set()
+            for s in symbols:
+                if str(Not(Atomic(s))) not in symbols:
+                    pure_symbols.add(s)
+            return pure_symbols
+
+        def find_pure_symbol(clauses):
+            pure_symbols = pure_symbol(clauses)
+            for clause in clauses:
+                for literal in clause.get_literals():
+                    if str(literal) in pure_symbols:
+                        return literal
+            return None
+
+        def dpll(clauses, symbols, model):
+            clauses, model = unit_propagate(clauses, model)
+            if len(clauses) == 0:
+                return True, model
+            if set().issubset(symbols):
+                return False, None
+            P = find_pure_symbol(clauses)
+            if P is not None:
+                symbols.remove(str(P))
+                clauses = [
+                    c
+                    for c in clauses
+                    if str(P) not in [str(l) for l in c.get_literals()]
+                ]
+                model[str(P)] = True
+                return dpll(clauses, symbols, model)
+            P = symbols.pop()
+            symbols.add(P)
+            clauses = [
+                c
+                for c in clauses
+                if str(Not(Atomic(P))) not in [str(l) for l in c.get_literals()]
+            ]
+            model[str(Not(Atomic(P)))] = False
+            return dpll(clauses, symbols, model)
+
+        clauses = self.toCnf()
+        query = query.toCNF()
+        clauses.append(Not(query).toCNF())
+        symbols = set()
+        for clause in clauses:
+            for literal in clause.get_literals():
+                symbols.add(str(literal))
+        model = {}
+        satisfiable, model = dpll(clauses, symbols, model)
+        print(f"{query} is {satisfiable} satisfiable")
+        return satisfiable
