@@ -1,9 +1,8 @@
-import turtle
-import time
 from enum import Enum
 from logic import Atomic, Not, Or
 from room import Room
 from kb import KB
+import turtle
 
 import math
 import copy
@@ -174,13 +173,11 @@ class Agent:
 
         self.visited_rooms = []
         self.safe_rooms = []
-        self.gold_rooms = []
         self.frontier = []
 
         self.alive = True
 
         self.achieved_golds = 0
-        self.tem_golds = 0
 
         self.kb = kb
 
@@ -264,7 +261,6 @@ class Agent:
             self.achieved_golds += 1
             print(f"Collected gold at {self.current_room}")
             self.kb.remove(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
-            self.gold_rooms.append(self.current_room)
             special = "G"
 
         if (
@@ -380,6 +376,18 @@ class Agent:
 
     #     return moves_copy
 
+    def check_safe(self, room):
+        check_wumpus = Atomic(f"W{room.x},{room.y}")
+        check_pit = Atomic(f"P{room.x},{room.y}")
+
+        if (
+            self.kb.resolution(Not(check_wumpus)) == True
+            and self.kb.resolution(Not(check_pit)) == True
+        ):
+            return True
+
+        return False
+
     def solve(self, show_room=True):
         i = 0
         moves = [(self.current_room, "Start")]
@@ -391,7 +399,11 @@ class Agent:
         screen = turtle.Screen()
         screen.setup(width=800, height=800)
         screen.bgcolor("black")
+
         while self.alive:
+            if show_room:
+                print(f"Current room: {self.current_room} - {self.current_room.parent}")
+
             i += 1
             if self.alive == False:
                 break
@@ -669,6 +681,6 @@ class Agent:
 
 map = Map()
 # agent = map.random_map()
-agent = map.read_map("map3.txt")
+agent = map.read_map("map4.txt")
 if agent is not None:
     agent.solve()
