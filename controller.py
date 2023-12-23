@@ -114,6 +114,14 @@ turtle.register_shape(gif_stench)
 ################################################################################
 ################################################################################
 
+
+room_height = 50
+room_length = 50
+half_room_height = room_height / 2
+half_room_length = room_length / 2
+offset_y = room_height * 5
+offset_x = room_length * 5
+
 wn = turtle.Screen()
 wn.bgcolor("white")
 wn.title("A maze game")
@@ -198,8 +206,8 @@ class Player(turtle.Turtle):
         self.speed(0)
     def go_up(self):
         move_to_x = self.xcor()
-        move_to_y = self.ycor()+70
-        if(move_to_y < 350):
+        move_to_y = self.ycor()+room_height
+        if(move_to_y < room_height*10):
             self.goto(move_to_x, move_to_y)
             self.shape(gif_agent_up)
     def is_collision(self,target):
@@ -215,27 +223,27 @@ class Player(turtle.Turtle):
 
     def go_down(self):
         move_to_x = player.xcor()
-        move_to_y = player.ycor() - 70
+        move_to_y = player.ycor() - room_height
 
-        if(move_to_y > -350):
+        if(move_to_y > -room_height*10):
             self.shape(gif_agent_down)
             self.goto(move_to_x, move_to_y)
 
 
     def go_left(self):
-        move_to_x = player.xcor() - 70
+        move_to_x = player.xcor() - room_length
         move_to_y = player.ycor()
 
-        if(move_to_x > -350):
+        if(move_to_x > -room_length*10):
             self.shape(gif_agent_left)
             self.goto(move_to_x, move_to_y)
 
 
     def go_right(self):
-        move_to_x = player.xcor() + 70
+        move_to_x = player.xcor() + room_length
         move_to_y = player.ycor()
 
-        if( move_to_x < 350 ):
+        if( move_to_x < room_length*10 ):
             self.shape(gif_agent_right)
             self.goto(move_to_x, move_to_y)
 
@@ -299,7 +307,6 @@ def draw_maze(map):
         rooms.append(room_line) # add line[y] to rooms (rooms is 2-d array)
 
     ## add stench true and breeze true for each room
-
     for y in range(len(map)):
         for x in range(len(map[y])):
             if rooms[y][x].pit == True:
@@ -358,70 +365,124 @@ def draw_maze(map):
 #read file
 turtle.screensize(canvwidth=turtle.window_width(), canvheight=turtle.window_height())
 
-def draw_map(map, offset):
-    room_height = 50
-    room_length = 50
-    half_room_height = room_height / 2
-    half_room_length = room_length / 2
-    offset_y = room_height * 5
-    offset_x = room_length * 5
+def draw_map(map): 
+    for i in range (0,2):
+        if i == 0:
+            offset = -turtle.window_width() / 4
+        else:
+            offset = +turtle.window_width() / 4
+        # Set line thickness and speed
+        t.pensize(4)
+        t.speed(0)
 
-    # Set line thickness and speed
-    t.pensize(4)
-    t.speed(0)
+        # Draw vertical lines
+        for i in range(len(map)+1):
+            t.penup()
+            t.goto(offset - offset_x + i * room_length, offset_y)  # Start at top-left corner
+            t.pendown()
+            t.goto(offset - offset_x + i * room_length, offset_y - len(map) * room_height)  # Draw down to bottom
 
-    # Draw vertical lines
-    for i in range(len(map)+1):
-        t.penup()
-        t.goto(offset - offset_x + i * room_length, offset_y)  # Start at top-left corner
-        t.pendown()
-        t.goto(offset - offset_x + i * room_length, offset_y - len(map) * room_height)  # Draw down to bottom
+        # Draw horizontal lines
+        for i in range(len(map)+1):
+            t.penup()
+            t.goto(offset - offset_x, offset_y - i * room_height)  # Start at top-left corner
+            t.pendown()
+            t.goto(offset - offset_x + len(map[0]) * room_length, offset_y - i * room_height)  # Draw across to right
 
-    # Draw horizontal lines
-    for i in range(len(map)+1):
-        t.penup()
-        t.goto(offset - offset_x, offset_y - i * room_height)  # Start at top-left corner
-        t.pendown()
-        t.goto(offset - offset_x + len(map[0]) * room_length, offset_y - i * room_height)  # Draw across to right
+        # Set image for agent, gold, pit, wumpus
+        for y in range(len(map)):
+            room_line = [] #line 1,2,3,4 ....
+            for x in range(len(map[y])):
+                character = map[y][x]
+                screen_x = offset - offset_x + x * room_length
+                screen_y = offset_y - y * room_height
+                room_element = Room(y,x) # room[x] in line[y]
 
-    # Set image for agent, gold, pit, wumpus
-    for y in range(len(map)):
-        room_line = [] #line 1,2,3,4 ....
-        for x in range(len(map[y])):
-            character = map[y][x]
-            screen_x = offset - offset_x + x * room_length
-            screen_y = offset_y - y * room_height
-            room_element = Room(y,x) # room[x] in line[y]
+                if character == 'A':
+                    player.goto(screen_x + half_room_length, screen_y - half_room_height)
+                    player.showturtle()
 
-            if character == 'A':
-                player.goto(screen_x + half_room_length, screen_y - half_room_height)
-                player.showturtle()
+                if character == 'G':
+                    room_element.treasure = True
+                    gold = Treasure()
+                    gold.goto(screen_x + half_room_length, screen_y - half_room_height + room_height / 4)
+                    treasures.append(gold)
+                    gold.showturtle()
 
-            if character == 'G':
-                room_element.treasure = True
-                gold = Treasure()
-                gold.goto(screen_x + half_room_length, screen_y - half_room_height + room_height / 4)
-                treasures.append(gold)
-                gold.showturtle()
+                if character == 'P':
+                    pit = Pit()
+                    room_element.pit = True
+                    pit.goto(screen_x + half_room_length, screen_y - half_room_height)
+                    pits.append(pit)
+                    pit.showturtle()
 
-            if character == 'P':
-                pit = Pit()
-                room_element.pit = True
-                pit.goto(screen_x + half_room_length, screen_y - half_room_height)
-                pits.append(pit)
-                pit.showturtle()
+                if character == 'W':
+                    room_element.wumpus = True
+                    wumpus = Wumpus()
+                    wumpus.goto(screen_x + half_room_length, screen_y - half_room_height)
+                    wumpuses.append(wumpus)
+                    wumpus.showturtle()
 
-            if character == 'W':
-                room_element.wumpus = True
-                wumpus = Wumpus()
-                wumpus.goto(screen_x + half_room_length, screen_y - half_room_height)
-                wumpuses.append(wumpus)
-                wumpus.showturtle()
+                room_line.append(room_element)
+            rooms.append(room_line) # add line[y] to rooms (rooms is 2-d array)
 
-            room_line.append(room_element)
-        rooms.append(room_line) # add line[y] to rooms (rooms is 2-d array)
+        ## add stench true and breeze true for each room
+        for y in range(len(map)):
+            for x in range(len(map[y])):
+                if rooms[y][x].pit == True:
+                    # rooms[y][x].shape("square")
+                    if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x+1].breeze = True
+                    if x-1 >= 0 and rooms[y][x-1].pit == False: rooms[y][x-1].breeze = True
+                    if y+1 < len(map) and rooms[y+1][x].pit == False: rooms[y+1][x].breeze = True
+                    if y-1 >= 0 and rooms[y-1][x].pit == False: rooms[y-1][x].breeze = True
+                if rooms[y][x].wumpus == True:
+                    if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x + 1].stench += 1
+                    if x-1 >= 0 and rooms[y][x - 1].pit == False: rooms[y][x - 1].stench += 1
+                    if y+1 < len(map) and rooms[y + 1][x].pit == False: rooms[y + 1][x].stench += 1
+                    if y-1 >= 0 and rooms[y - 1][x].pit == False: rooms[y - 1][x].stench += 1
 
-    # Rest of the code...
+
+        breeze_offset_x = room_length/2
+        breeze_offset_y = room_height/2
+        stench_offset_x = room_length/2
+        stench_offset_y = room_height/2
+        #draw breeze + stench
+        for y in range(len(map)):
+            for x in range(len(map[y])):
+                screen_x = offset - offset_x + x * room_length
+                screen_y = offset_y - y * room_height
+                if rooms[y][x].breeze == True:
+                    # print("Room", (y, x), "::::", rooms[y][x].breeze)
+                    breeze = Breeze()
+                    breeze.goto(screen_x + breeze_offset_x,screen_y - breeze_offset_y)
+                    breezes.append(breeze) #append to check collison
+                    breeze.showturtle()
+
+                if rooms[y][x].stench > 0:
+                    stench = Stench()
+                    stench.goto(screen_x + stench_offset_x,screen_y - stench_offset_y)
+                    stenches.append(stench) #append to check collison
+                    stench.showturtle()
+
+
+    wn.listen()
+    wn.onkey(player.go_up, "Up")
+    wn.onkey(player.go_down, "Down")
+    wn.onkey(player.go_left, "Left")
+    wn.onkey(player.go_right, "Right")
+
+    while(True):
+        for pit in pits:
+            if player.is_collision(pit):
+                print("Collision with pit")
+
+        for treasure in treasures:
+            if player.is_collision(treasure):
+                print("Collision with gold")
+                treasures.remove(treasure)
+                treasure.destroy()
+                player.gold += 100
+        wn.update()
 
 
 
@@ -438,6 +499,5 @@ stenches = []
 wumpuses = []
 
 # Draw the two maps
-draw_map(map, -turtle.window_width() / 4)
-draw_map(map, +turtle.window_width() / 4)
+draw_map(map)
 turtle.done()
