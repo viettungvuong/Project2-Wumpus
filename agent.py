@@ -404,6 +404,8 @@ class Agent:
             if show_room:
                 print(f"Current room: {self.current_room} - {self.current_room.parent}")
 
+            self.points -= 10
+
             i += 1
             if self.alive == False:
                 break
@@ -490,12 +492,10 @@ class Agent:
                 break
 
             prev = self.current_room  # phòng hiện tại (chuẩn bị là thành phòng trước)
-            found_initial = True
             if next_room.parent != prev:  # trace back về
                 common_parent = self.common_parent(next_room, prev)
 
                 if common_parent is None:
-                    found_initial = False
                     common_parent = self.common_parent(next_room.parent, prev)
 
                 # print(f"Common parent: {common_parent}, from {prev} to {next_room}")
@@ -508,6 +508,7 @@ class Agent:
                     if show_room:
                         print(f"Current room: {current} - Back")
                     moves.append((current, prev_room))
+                    self.points -= 10
 
                     if current == common_parent:
                         break
@@ -535,6 +536,7 @@ class Agent:
                     current = move_back_trace.pop(-1)
                     if show_room:
                         print(f"Current room: {current} - Move to")
+                    self.points -= 10
                     moves.append((current, None))
 
             move_to = self.move_to(next_room)
@@ -565,6 +567,8 @@ class Agent:
         while current_room is None or not (current_room.x == 0 and current_room.y == 0):
             if show_room:
                 print(f"Current room: {current_room} - {current_room.parent}")
+
+            self.points -= 10
             next_room = None
             shot_wumpus = False
 
