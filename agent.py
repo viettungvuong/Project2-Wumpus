@@ -396,10 +396,6 @@ class Agent:
         copy_visited_rooms = []
         copy_frontier = []
 
-        screen = turtle.Screen()
-        screen.setup(width=800, height=800)
-        screen.bgcolor("black")
-
         while self.alive:
             if show_room:
                 print(f"Current room: {self.current_room} - {self.current_room.parent}")

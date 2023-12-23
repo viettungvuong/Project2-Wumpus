@@ -117,7 +117,7 @@ turtle.register_shape(gif_stench)
 wn = turtle.Screen()
 wn.bgcolor("white")
 wn.title("A maze game")
-wn.setup(800,800)
+wn.setup(1.0,1.0)
 
 #room
 class Room():
@@ -356,6 +356,75 @@ def draw_maze(map):
 ################################################################################
 ################################################################################
 #read file
+turtle.screensize(canvwidth=turtle.window_width(), canvheight=turtle.window_height())
+
+def draw_map(map, offset):
+    room_height = 50
+    room_length = 50
+    half_room_height = room_height / 2
+    half_room_length = room_length / 2
+    offset_y = room_height * 5
+    offset_x = room_length * 5
+
+    # Set line thickness and speed
+    t.pensize(4)
+    t.speed(0)
+
+    # Draw vertical lines
+    for i in range(len(map)+1):
+        t.penup()
+        t.goto(offset - offset_x + i * room_length, offset_y)  # Start at top-left corner
+        t.pendown()
+        t.goto(offset - offset_x + i * room_length, offset_y - len(map) * room_height)  # Draw down to bottom
+
+    # Draw horizontal lines
+    for i in range(len(map)+1):
+        t.penup()
+        t.goto(offset - offset_x, offset_y - i * room_height)  # Start at top-left corner
+        t.pendown()
+        t.goto(offset - offset_x + len(map[0]) * room_length, offset_y - i * room_height)  # Draw across to right
+
+    # Set image for agent, gold, pit, wumpus
+    for y in range(len(map)):
+        room_line = [] #line 1,2,3,4 ....
+        for x in range(len(map[y])):
+            character = map[y][x]
+            screen_x = offset - offset_x + x * room_length
+            screen_y = offset_y - y * room_height
+            room_element = Room(y,x) # room[x] in line[y]
+
+            if character == 'A':
+                player.goto(screen_x + half_room_length, screen_y - half_room_height)
+                player.showturtle()
+
+            if character == 'G':
+                room_element.treasure = True
+                gold = Treasure()
+                gold.goto(screen_x + half_room_length, screen_y - half_room_height + room_height / 4)
+                treasures.append(gold)
+                gold.showturtle()
+
+            if character == 'P':
+                pit = Pit()
+                room_element.pit = True
+                pit.goto(screen_x + half_room_length, screen_y - half_room_height)
+                pits.append(pit)
+                pit.showturtle()
+
+            if character == 'W':
+                room_element.wumpus = True
+                wumpus = Wumpus()
+                wumpus.goto(screen_x + half_room_length, screen_y - half_room_height)
+                wumpuses.append(wumpus)
+                wumpus.showturtle()
+
+            room_line.append(room_element)
+        rooms.append(room_line) # add line[y] to rooms (rooms is 2-d array)
+
+    # Rest of the code...
+
+
+
 t = turtle.Turtle()
 map = read_file("map1.txt")
 
@@ -368,5 +437,7 @@ breezes = []
 stenches = []
 wumpuses = []
 
-draw_maze(map)
+# Draw the two maps
+draw_map(map, -turtle.window_width() / 4)
+draw_map(map, +turtle.window_width() / 4)
 turtle.done()
