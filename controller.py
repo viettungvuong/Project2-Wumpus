@@ -195,6 +195,30 @@ class Wumpus(turtle.Turtle):
         self.goto(2000,2000)
         self.hideturtle()
 
+#unvisited
+class Unvisited(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.penup()
+        self.speed(0)
+        self.color("grey")
+    def destroy(self):
+        self.goto(2000,2000)
+        self.hideturtle()
+
+#frontier
+class Unvisited(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.penup()
+        self.speed(0)
+        self.color("blue")
+    def destroy(self):
+        self.goto(2000,2000)
+        self.hideturtle()
+
 #player
 class Player(turtle.Turtle):
     def __init__(self):
