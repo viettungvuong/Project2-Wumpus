@@ -109,6 +109,13 @@ class KB:
 
         return False
 
+    def wumpus_pit_only(self):
+        new_sentences = set()
+        for sentence in self.sentences:
+            if str(sentence).__contains__("W") or str(sentence).__contains__("P"):
+                new_sentences.add(sentence)
+        return new_sentences
+
     def resolution(self, query):
         if self.check(query):
             return True
@@ -135,10 +142,15 @@ class KB:
                         if str(l) != str(negated_literal)
                     ]
 
-                    if len(new_clause) == 0:
-                        break
+                    new_disjunction = None
+                    if len(new_clause) != 0:
+                        for clause in new_clause:
+                            if new_disjunction is None:
+                                new_disjunction = clause
+                            else:
+                                new_disjunction = Or(new_disjunction, clause)
 
-                    resolvents.update(frozenset(new_clause))
+                    resolvents.add(new_disjunction)
 
             return resolvents, resolved
 
@@ -146,26 +158,38 @@ class KB:
         query = query.toCNF()
         clauses.append(Not(query).toCNF())
 
-        # print([str(c) for c in clauses])
-
-        new = []
+        new = set()
 
         while True:
+            new.clear()
             n = len(clauses)
 
-            for i in range(n):
-                for j in range(i + 1, n):
-                    resolvents, resolved = resolve(clauses[i], clauses[j])
-                    if resolved:
-                        if len(resolvents) == 0:  # KB and negation q unsatisfiable
-                            # print(str(clauses[i]) + " " + str(clauses[j]))
-                            return True
-                        new.extend(resolvents)
+            i = 0
 
-            if set(new).issubset(set(clauses)):
+            while i < n:
+                j = i + 1
+                while j < n:
+                    a, b = clauses[i], clauses[j]
+                    resolvents, resolved = resolve(a, b)
+                    if resolved:
+                        if None in resolvents:
+                            return True
+                        new.update(
+                            [
+                                resolvent
+                                for resolvent in resolvents
+                                if resolvent not in clauses
+                            ]
+                        )
+
+                    j += 1
+
+                i += 1
+
+            if new.issubset(set(clauses)):
                 return False
 
-            clauses.extend(new)
+            clauses.extend([c for c in new if c not in clauses])
 
     def dpll_satisfiable(self, query):
         if self.check(query):
@@ -251,3 +275,71 @@ class KB:
         satisfiable, model = dpll(clauses, symbols, model)
         print(f"{query} is {satisfiable} satisfiable")
         return satisfiable
+        if self.check(query):
+            return True
+
+        if self.check(Not(query)):
+            return False
+
+        def resolve(clause1, clause2):  # resolve clause 1 và clause 2
+            resolvents = set()
+            resolved = False
+
+            for literal in clause1.get_literals():
+                negated_literal = Not(literal)
+
+                if str(negated_literal) in [str(l) for l in clause2.get_literals()]:
+                    # nếu gặp 2 literal đối nhau
+                    resolved = True
+
+                    new_clause = [
+                        l for l in clause1.get_literals() if str(l) != str(literal)
+                    ] + [
+                        l
+                        for l in clause2.get_literals()
+                        if str(l) != str(negated_literal)
+                    ]
+
+                    if len(new_clause) == 0:
+                        break
+
+                    resolvents.update(frozenset(new_clause))
+
+            return resolvents, resolved
+
+        clauses = self.toCnf()
+
+        new = []
+
+        while True:
+            n = len(clauses)
+
+            for i in range(n):
+                for j in range(i + 1, n):
+                    resolvents, resolved = resolve(clauses[i], clauses[j])
+                    if str(query) not in [str(r) for r in resolvents]:
+                        return False
+                    if len(resolvents) == 1:  # KB and negation q unsatisfiable
+                        if str(resolvents[0]) == str(query):
+                            return True
+                        else:
+                            return False
+                    if len(resolvents) == 0:
+                        return False
+                    new.extend(resolvents)
+
+            clauses.extend(new)
+
+
+# kb = KB()
+# kb.add_sentence(Not(Atomic("P1,2")))
+# kb.add_sentence(Not(Atomic("P2,2")))
+# kb.add_sentence(Not(Atomic("P3,2")))
+# kb.add_sentence(
+#     Or(
+#         Atomic("P4,2"),
+#         Or(Atomic("P3,2"), Or(Atomic("P1,2"), Atomic("P2,2"))),
+#     )
+# )
+# print(kb.resolution(Atomic("P4,2")))
+# print(kb.resolution(Not(Atomic("P4,2"))))
