@@ -119,6 +119,17 @@ turtle.register_shape(gif_stench)
 
 #Unvisited
 png_unvisited = "./asset/unvisited.jpg"
+gif_unvisited = "./asset/unvisited.gif"
+img = Image.open(png_unvisited)
+img.save(gif_unvisited,"GIF")
+# Resize
+new_size = (room_height, room_length)  # Set the new size (width, height)
+resized_img = img.resize(new_size)
+# Save the resized image as a GIF
+resized_img.save(gif_unvisited, "GIF")
+turtle.register_shape(gif_unvisited)
+
+
 #Frontier
 png_frontier = "./asset/frontier.png"
 gif_frontier = "./asset/frontier.gif"
@@ -433,8 +444,8 @@ def draw_map(map):
         frontier_room.goto(screen_x, screen_y)
         frontier_room.showturtle()
     for room in unvisited:
-        screen_x = offset - offset_x + room.x * room_length
-        screen_y = offset_y - room.y * room_height
+        screen_x = offset - offset_x + room.x * room_length + room_length/2
+        screen_y = offset_y - room.y * room_height - room_height/2
         unvisited_room = Unvisited()
         unvisited_room.goto(screen_x, screen_y)
         unvisited_room.showturtle()
@@ -552,9 +563,11 @@ wumpuses = []
 # thuat toan se luu state vao trong unvisted va frontier r draw ra
 unvisited = []
 from room import Room as roomroom
-myRoom=roomroom(0,1,0)
+room010=roomroom(0,1,0)
+room220=roomroom(2,2,0)
 frontier = []
-frontier.append(myRoom)
+frontier.append(room010)
+unvisited.append(room220)
 
 # Draw the map
 draw_map(map)
