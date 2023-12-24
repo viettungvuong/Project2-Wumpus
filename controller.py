@@ -1,3 +1,10 @@
+room_height = 50
+room_length = 50
+half_room_height = room_height / 2
+half_room_length = room_length / 2
+offset_y = room_height * 5
+offset_x = room_length * 5
+
 def read_file(filename):
     # Read the content of the file
     with open(filename, "r") as file:
@@ -109,18 +116,28 @@ resized_img = img.resize(new_size)
 # Save the resized image as a GIF
 resized_img.save(gif_stench, "GIF")
 turtle.register_shape(gif_stench)
+
+#Unvisited
+png_unvisited = "./asset/unvisited.jpg"
+#Frontier
+png_frontier = "./asset/frontier.png"
+gif_frontier = "./asset/frontier.gif"
+img = Image.open(png_frontier)
+img.save(gif_frontier,"GIF")
+# Resize
+new_size = (room_height, room_length)  # Set the new size (width, height)
+resized_img = img.resize(new_size)
+# Save the resized image as a GIF
+resized_img.save(gif_frontier, "GIF")
+turtle.register_shape(gif_frontier)
+
 ################################################################################
 ################################################################################
 ################################################################################
 ################################################################################
 
 
-room_height = 50
-room_length = 50
-half_room_height = room_height / 2
-half_room_length = room_length / 2
-offset_y = room_height * 5
-offset_x = room_length * 5
+
 
 wn = turtle.Screen()
 wn.bgcolor("white")
@@ -200,21 +217,21 @@ class Unvisited(turtle.Turtle):
     def __init__(self):
         turtle.Turtle.__init__(self)
         self.hideturtle()
+        self.shape(gif_unvisited)
         self.penup()
         self.speed(0)
-        self.color("grey")
     def destroy(self):
         self.goto(2000,2000)
         self.hideturtle()
 
 #frontier
-class Unvisited(turtle.Turtle):
+class Frontier(turtle.Turtle):
     def __init__(self):
         turtle.Turtle.__init__(self)
         self.hideturtle()
+        self.shape(gif_frontier)
         self.penup()
         self.speed(0)
-        self.color("blue")
     def destroy(self):
         self.goto(2000,2000)
         self.hideturtle()
@@ -408,6 +425,20 @@ def draw_map(map):
         t.pendown()
         t.goto(offset - offset_x + len(map[0]) * room_length, offset_y - i * room_height)  # Draw across to right
 
+    #draw frontier and unvisited
+    for room in frontier:
+        screen_x = offset - offset_x + room.x * room_length + room_length/2
+        screen_y = offset_y - room.y * room_height - room_height/2
+        frontier_room = Frontier()
+        frontier_room.goto(screen_x, screen_y)
+        frontier_room.showturtle()
+    for room in unvisited:
+        screen_x = offset - offset_x + room.x * room_length
+        screen_y = offset_y - room.y * room_height
+        unvisited_room = Unvisited()
+        unvisited_room.goto(screen_x, screen_y)
+        unvisited_room.showturtle()
+
     # Set image for agent, gold, pit, wumpus
     for y in range(len(map)):
         room_line = [] #line 1,2,3,4 ....
@@ -483,24 +514,6 @@ def draw_map(map):
                 stenches.append(stench) #append to check collison
                 stench.showturtle()
 
-    #draw frontier and unvisited
-    for y in range(len(map)):
-        for x in range(len(map[y])):
-            screen_x = offset - offset_x + x * room_length
-            screen_y = offset_y - y * room_height
-            if rooms[y][x].breeze == True:
-                # print("Room", (y, x), "::::", rooms[y][x].breeze)
-                breeze = Breeze()
-                breeze.goto(screen_x + breeze_offset_x,screen_y - breeze_offset_y)
-                breezes.append(breeze) #append to check collison
-                breeze.showturtle()
-
-            if rooms[y][x].stench > 0:
-                stench = Stench()
-                stench.goto(screen_x + stench_offset_x,screen_y - stench_offset_y)
-                stenches.append(stench) #append to check collison
-                stench.showturtle()
-
     wn.update()
 
     wn.listen()
@@ -536,6 +549,13 @@ breezes = []
 stenches = []
 wumpuses = []
 
-# Draw the two maps
+# thuat toan se luu state vao trong unvisted va frontier r draw ra
+unvisited = []
+from room import Room as roomroom
+myRoom=roomroom(0,1,0)
+frontier = []
+frontier.append(myRoom)
+
+# Draw the map
 draw_map(map)
 turtle.done()
