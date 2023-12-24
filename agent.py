@@ -538,6 +538,9 @@ class Agent:
                         print(f"Current room: {current} - Move to")
                     self.points -= 10
                     moves.append((current, None))
+                self.points += (
+                    10  # bù lại điểm bị mất do sẽ có một lần đứng yên tại chỗ
+                )
 
             move_to = self.move_to(next_room)
             moves.append((next_room, move_to))
@@ -547,9 +550,13 @@ class Agent:
 
         for wumpus in met_wumpus_rooms:
             room, frontier, visited_rooms = wumpus
-            self.analyse_wumpus(room, frontier, visited_rooms)
+            wumpus_analyse = self.analyse_wumpus(room, frontier, visited_rooms)
+            points = wumpus_analyse[0]
+            if points > self.points:
+                self.points = points
+                moves = wumpus_analyse[1]
 
-        return self.points
+        return (self.points, moves)
 
     def exit_cave(self, moves, show_room=True):
         # search from current room to the cave
@@ -644,8 +651,7 @@ class Agent:
         golds = self.locate_gold(wumpus_room)
 
         if len(golds) == 0:
-            # print(f"No other gold found at {wumpus_room}")
-            return math.inf
+            return (math.inf, None)
 
         # nếu có gold
         print(f"Other gold found at {wumpus_room}")
@@ -658,7 +664,8 @@ class Agent:
         copy_agent.visited_rooms.extend(visited_rooms)
         copy_agent.safe_rooms.clear()
 
-        return copy_agent.solve(show_room=False)
+        solve = copy_agent.solve(show_room=False)
+        return solve
 
     def locate_gold(self, starting_room):
         frontier = []
