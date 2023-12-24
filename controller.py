@@ -1,3 +1,10 @@
+room_height = 50
+room_length = 50
+half_room_height = room_height / 2
+half_room_length = room_length / 2
+offset_y = room_height * 5
+offset_x = room_length * 5
+
 def read_file(filename):
     # Read the content of the file
     with open(filename, "r") as file:
@@ -109,15 +116,33 @@ resized_img = img.resize(new_size)
 # Save the resized image as a GIF
 resized_img.save(gif_stench, "GIF")
 turtle.register_shape(gif_stench)
+
+#Unvisited
+png_unvisited = "./asset/unvisited.jpg"
+#Frontier
+png_frontier = "./asset/frontier.png"
+gif_frontier = "./asset/frontier.gif"
+img = Image.open(png_frontier)
+img.save(gif_frontier,"GIF")
+# Resize
+new_size = (room_height, room_length)  # Set the new size (width, height)
+resized_img = img.resize(new_size)
+# Save the resized image as a GIF
+resized_img.save(gif_frontier, "GIF")
+turtle.register_shape(gif_frontier)
+
 ################################################################################
 ################################################################################
 ################################################################################
 ################################################################################
 
+
+
+
 wn = turtle.Screen()
 wn.bgcolor("white")
 wn.title("A maze game")
-wn.setup(800,800)
+wn.setup(1.0,1.0)
 
 #room
 class Room():
@@ -187,6 +212,30 @@ class Wumpus(turtle.Turtle):
         self.goto(2000,2000)
         self.hideturtle()
 
+#unvisited
+class Unvisited(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.shape(gif_unvisited)
+        self.penup()
+        self.speed(0)
+    def destroy(self):
+        self.goto(2000,2000)
+        self.hideturtle()
+
+#frontier
+class Frontier(turtle.Turtle):
+    def __init__(self):
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.shape(gif_frontier)
+        self.penup()
+        self.speed(0)
+    def destroy(self):
+        self.goto(2000,2000)
+        self.hideturtle()
+
 #player
 class Player(turtle.Turtle):
     def __init__(self):
@@ -198,8 +247,8 @@ class Player(turtle.Turtle):
         self.speed(0)
     def go_up(self):
         move_to_x = self.xcor()
-        move_to_y = self.ycor()+70
-        if(move_to_y < 350):
+        move_to_y = self.ycor()+room_height
+        if(move_to_y < room_height*10):
             self.goto(move_to_x, move_to_y)
             self.shape(gif_agent_up)
     def is_collision(self,target):
@@ -215,27 +264,27 @@ class Player(turtle.Turtle):
 
     def go_down(self):
         move_to_x = player.xcor()
-        move_to_y = player.ycor() - 70
+        move_to_y = player.ycor() - room_height
 
-        if(move_to_y > -350):
+        if(move_to_y > -room_height*10):
             self.shape(gif_agent_down)
             self.goto(move_to_x, move_to_y)
 
 
     def go_left(self):
-        move_to_x = player.xcor() - 70
+        move_to_x = player.xcor() - room_length
         move_to_y = player.ycor()
 
-        if(move_to_x > -350):
+        if(move_to_x > -room_length*10):
             self.shape(gif_agent_left)
             self.goto(move_to_x, move_to_y)
 
 
     def go_right(self):
-        move_to_x = player.xcor() + 70
+        move_to_x = player.xcor() + room_length
         move_to_y = player.ycor()
 
-        if( move_to_x < 350 ):
+        if( move_to_x < room_length*10 ):
             self.shape(gif_agent_right)
             self.goto(move_to_x, move_to_y)
 
@@ -299,7 +348,6 @@ def draw_maze(map):
         rooms.append(room_line) # add line[y] to rooms (rooms is 2-d array)
 
     ## add stench true and breeze true for each room
-
     for y in range(len(map)):
         for x in range(len(map[y])):
             if rooms[y][x].pit == True:
@@ -356,6 +404,139 @@ def draw_maze(map):
 ################################################################################
 ################################################################################
 #read file
+turtle.screensize(canvwidth=turtle.window_width(), canvheight=turtle.window_height())
+
+def draw_map(map): 
+    offset = 0
+    # Set line thickness and speed
+    wn.tracer(0)
+    t.pensize(4)
+    # Draw vertical lines
+    for i in range(len(map)+1):
+        t.penup()
+        t.goto(offset - offset_x + i * room_length, offset_y)  # Start at top-left corner
+        t.pendown()
+        t.goto(offset - offset_x + i * room_length, offset_y - len(map) * room_height)  # Draw down to bottom
+
+    # Draw horizontal lines
+    for i in range(len(map)+1):
+        t.penup()
+        t.goto(offset - offset_x, offset_y - i * room_height)  # Start at top-left corner
+        t.pendown()
+        t.goto(offset - offset_x + len(map[0]) * room_length, offset_y - i * room_height)  # Draw across to right
+
+    #draw frontier and unvisited
+    for room in frontier:
+        screen_x = offset - offset_x + room.x * room_length + room_length/2
+        screen_y = offset_y - room.y * room_height - room_height/2
+        frontier_room = Frontier()
+        frontier_room.goto(screen_x, screen_y)
+        frontier_room.showturtle()
+    for room in unvisited:
+        screen_x = offset - offset_x + room.x * room_length
+        screen_y = offset_y - room.y * room_height
+        unvisited_room = Unvisited()
+        unvisited_room.goto(screen_x, screen_y)
+        unvisited_room.showturtle()
+
+    # Set image for agent, gold, pit, wumpus
+    for y in range(len(map)):
+        room_line = [] #line 1,2,3,4 ....
+        for x in range(len(map[y])):
+            character = map[y][x]
+            screen_x = offset - offset_x + x * room_length
+            screen_y = offset_y - y * room_height
+            room_element = Room(y,x) # room[x] in line[y]
+
+            if character == 'A':
+                player.goto(screen_x + half_room_length, screen_y - half_room_height)
+                player.showturtle()
+
+            if character == 'G':
+                room_element.treasure = True
+                gold = Treasure()
+                gold.goto(screen_x + half_room_length, screen_y - half_room_height + room_height / 4)
+                treasures.append(gold)
+                gold.showturtle()
+
+            if character == 'P':
+                pit = Pit()
+                room_element.pit = True
+                pit.goto(screen_x + half_room_length, screen_y - half_room_height)
+                pits.append(pit)
+                pit.showturtle()
+
+            if character == 'W':
+                room_element.wumpus = True
+                wumpus = Wumpus()
+                wumpus.goto(screen_x + half_room_length, screen_y - half_room_height)
+                wumpuses.append(wumpus)
+                wumpus.showturtle()
+
+            room_line.append(room_element)
+        rooms.append(room_line) # add line[y] to rooms (rooms is 2-d array)
+
+    ## add stench true and breeze true for each room
+    for y in range(len(map)):
+        for x in range(len(map[y])):
+            if rooms[y][x].pit == True:
+                # rooms[y][x].shape("square")
+                if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x+1].breeze = True
+                if x-1 >= 0 and rooms[y][x-1].pit == False: rooms[y][x-1].breeze = True
+                if y+1 < len(map) and rooms[y+1][x].pit == False: rooms[y+1][x].breeze = True
+                if y-1 >= 0 and rooms[y-1][x].pit == False: rooms[y-1][x].breeze = True
+            if rooms[y][x].wumpus == True:
+                if x+1 < len(map) and rooms[y][x+1].pit == False: rooms[y][x + 1].stench += 1
+                if x-1 >= 0 and rooms[y][x - 1].pit == False: rooms[y][x - 1].stench += 1
+                if y+1 < len(map) and rooms[y + 1][x].pit == False: rooms[y + 1][x].stench += 1
+                if y-1 >= 0 and rooms[y - 1][x].pit == False: rooms[y - 1][x].stench += 1
+
+
+    breeze_offset_x = room_length/2
+    breeze_offset_y = room_height/2
+    stench_offset_x = room_length/2
+    stench_offset_y = room_height/2
+    #draw breeze + stench
+    for y in range(len(map)):
+        for x in range(len(map[y])):
+            screen_x = offset - offset_x + x * room_length
+            screen_y = offset_y - y * room_height
+            if rooms[y][x].breeze == True:
+                # print("Room", (y, x), "::::", rooms[y][x].breeze)
+                breeze = Breeze()
+                breeze.goto(screen_x + breeze_offset_x,screen_y - breeze_offset_y)
+                breezes.append(breeze) #append to check collison
+                breeze.showturtle()
+
+            if rooms[y][x].stench > 0:
+                stench = Stench()
+                stench.goto(screen_x + stench_offset_x,screen_y - stench_offset_y)
+                stenches.append(stench) #append to check collison
+                stench.showturtle()
+
+    wn.update()
+
+    wn.listen()
+    wn.onkey(player.go_up, "Up")
+    wn.onkey(player.go_down, "Down")
+    wn.onkey(player.go_left, "Left")
+    wn.onkey(player.go_right, "Right")
+
+    while(True):
+        for pit in pits:
+            if player.is_collision(pit):
+                print("Collision with pit")
+
+        for treasure in treasures:
+            if player.is_collision(treasure):
+                print("Collision with gold")
+                treasures.remove(treasure)
+                treasure.destroy()
+                player.gold += 100
+        wn.update()
+
+
+
 t = turtle.Turtle()
 map = read_file("map1.txt")
 
@@ -368,5 +549,13 @@ breezes = []
 stenches = []
 wumpuses = []
 
-draw_maze(map)
+# thuat toan se luu state vao trong unvisted va frontier r draw ra
+unvisited = []
+from room import Room as roomroom
+myRoom=roomroom(0,1,0)
+frontier = []
+frontier.append(myRoom)
+
+# Draw the map
+draw_map(map)
 turtle.done()
