@@ -57,6 +57,7 @@ class Map:
                     for move in moves:
                         kb.add_sentence(Atomic(f"S{move[0]},{move[1]}"))
                     map_str[i] += "W"
+                    count_wumpus += 1
                 elif choice == 1:
                     if i == 0 and j == 0:  # pit không thể ở chỗ ra khỏi cave
                         map_str[i] += "-"
@@ -69,8 +70,11 @@ class Map:
                     for move in moves:
                         kb.add_sentence(Atomic(f"B{move[0]},{move[1]}"))
                     map_str[i] += "P"
+                    count_pit += 1
                 elif choice == 2:
                     self.map[i][j].gold = True
+                    kb.add_sentence(Not(Atomic(f"W{i},{j}")))
+                    kb.add_sentence(Not(Atomic(f"P{i},{j}")))
                     map_str[i] += "G"
                 elif choice == 3:
                     if has_agent == False:
@@ -78,6 +82,7 @@ class Map:
                         map_str[i] += "A"
                         kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                         kb.add_sentence(Not(Atomic(f"P{i},{j}")))
+                        agent_pos = (i, j)
                     else:
                         map_str[i] += "-"
                 else:
@@ -87,14 +92,46 @@ class Map:
                     map_str[i] += "."
 
         if has_agent == False:  # nếu không có agent thì random
-            (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
             while True:
-                if self.map[i][j].wumpus == False and self.map[i][j].pit == False:
+                (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
+                if map_str[i][j * 2] == "-":
                     if kb.check(Atomic(f"G{i},{j}")) == False:
-                        map_str[i] = map_str[i][:j] + "A" + map_str[i][j + 1 :]
+                        map_str[i] = map_str[i][: j * 2] + "A" + map_str[i][j * 2 + 1 :]
                         kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                         kb.add_sentence(Not(Atomic(f"P{i},{j}")))
+                        has_agent = True
+                        agent_pos = (i, j)
                         break
+
+        if count_wumpus == 0:
+            while True:
+                (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
+                if map_str[i][j * 2] == "-":
+                    map_str[i] = map_str[i][: j * 2] + "W" + map_str[i][j * 2 + 1 :]
+                    for move in self.map[i][j].surrounding_rooms:
+                        kb.add_sentence(Atomic(f"S{move[0]},{move[1]}"))
+                    count_wumpus += 1
+                    break
+
+        if count_pit == 0:
+            while True:
+                (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
+                if map_str[i][j * 2] == "-":
+                    map_str[i] = map_str[i][: j * 2] + "P" + map_str[i][j * 2 + 1 :]
+                    for move in self.map[i][j].surrounding_rooms:
+                        kb.add_sentence(Atomic(f"B{move[0]},{move[1]}"))
+                    count_pit += 1
+                    break
+
+        if count_gold == 0:
+            while True:
+                (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
+                if map_str[i][j * 2] == "-":
+                    map_str[i] = map_str[i][: j * 2] + "G" + map_str[i][j * 2 + 1 :]
+                    kb.add_sentence(Not(Atomic(f"W{i},{j}")))
+                    kb.add_sentence(Not(Atomic(f"P{i},{j}")))
+                    count_gold += 1
+                    break
 
         for i in range(n):
             print(map_str[i])
@@ -128,6 +165,8 @@ class Map:
 
                         if line_split[j].__contains__("G"):
                             self.map[i][j].gold = True
+                            kb.add_sentence(Not(Atomic(f"W{i},{j}")))
+                            kb.add_sentence(Not(Atomic(f"P{i},{j}")))
 
                         if line_split[j].__contains__("W"):  # meet wumpus
                             # kb.add_sentence(Atomic(f"W{i},{j}"))
@@ -251,6 +290,7 @@ class Agent:
             return "Died"
 
         if self.current_room.gold:
+            self.current_room.gold = False
             self.points += 1000
             self.achieved_golds += 1
             print(f"Collected gold at {self.current_room}")
@@ -604,7 +644,7 @@ class Agent:
 
 
 map = Map()
-# agent = map.random_map()
-agent = map.read_map("map1.txt")
+agent = map.random_map()
+# agent = map.read_map("map1.txt")
 if agent is not None:
     agent.solve()
