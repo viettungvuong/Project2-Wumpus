@@ -75,6 +75,7 @@ class Map:
                     self.map[i][j].gold = True
                     kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                     kb.add_sentence(Not(Atomic(f"P{i},{j}")))
+                    kb.add_sentence(Atomic(f"G{i},{j}"))
                     map_str[i] += "G"
                 elif choice == 3:  # agent position
                     if has_agent == False:
@@ -168,6 +169,7 @@ class Map:
 
                         if line_split[j].__contains__("G"):
                             self.map[i][j].gold = True
+                            kb.add_sentence(Atomic(f"G{i},{j}"))
                             kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                             kb.add_sentence(Not(Atomic(f"P{i},{j}")))
 
@@ -292,9 +294,11 @@ class Agent:
             print(f"You died at {self.current_room} - {self.current_room.parent}")
             return "Died"
 
-        if self.current_room.gold:
+        if (
+            self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
+            == True
+        ):
             self.current_room.gold = False
-
             self.points += 1000
             self.achieved_golds += 1
             self.kb.remove(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
