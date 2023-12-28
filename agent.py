@@ -129,6 +129,7 @@ class Map:
             while True:
                 (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
                 if map_str[i][j * 2] == "-":
+                    self.map[i][j].gold = True
                     map_str[i] = map_str[i][: j * 2] + "G" + map_str[i][j * 2 + 1 :]
                     kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                     kb.add_sentence(Not(Atomic(f"P{i},{j}")))
@@ -293,6 +294,7 @@ class Agent:
 
         if self.current_room.gold:
             self.current_room.gold = False
+
             self.points += 1000
             self.achieved_golds += 1
             self.kb.remove(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
@@ -641,8 +643,8 @@ class Agent:
 
 
 map = Map()
-# agent = map.random_map()
-agent = map.read_map("map5.txt")
+agent = map.random_map()
+# agent = map.read_map("map5.txt")
 if agent is not None:
     solve = agent.solve()
     print(f"Points: {solve[0]}")
