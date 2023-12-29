@@ -29,7 +29,7 @@ class Map:
         return abs(current_room.x - goal_room.x) + abs(current_room.y - goal_room.y)
 
     def random_map(self):
-        n = random.randint(3, 5)
+        n = random.randint(3, 10)
         self.n = n
         self.map = [[Room(i, j, n) for j in range(n)] for i in range(n)]
 
@@ -117,7 +117,7 @@ class Map:
 
         if count_pit == 0:
             while True:
-                (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
+                (i, j) = (random.randint(1, n - 1), random.randint(1, n - 1))
                 if map_str[i][j * 2] == "-":
                     map_str[i] = map_str[i][: j * 2] + "P" + map_str[i][j * 2 + 1 :]
                     for move in self.map[i][j].surrounding_rooms:
@@ -261,16 +261,15 @@ class Agent:
         return percept
 
     def shoot(self, next_room):
-        # next_room = room_direction(self.current_room, self.direction)
-
         if next_room is not None:
             self.points -= 100
             x = next_room.x
             y = next_room.y
             if next_room.wumpus == True:
-                print(f"Wumpus screamed at ({x}, {y})")
+                print(f"Wumpus screamed at {next_room}")
                 self.kb.remove(Atomic(f"W{x},{y}"))
                 next_room.wumpus = False
+                map.get_room(x, y).wumpus = False
                 self.kb.remove(
                     Atomic(f"S{r[0]},{r[1]}")
                     for r in map.get_room(x, y).surrounding_rooms
@@ -291,8 +290,8 @@ class Agent:
         if self.current_room.wumpus or self.current_room.pit:
             self.points -= 10000
             self.alive = False
-            print(f"You died at {self.current_room} - {self.current_room.parent}")
-            return "Died"
+            reason = "wumpus" if self.current_room.wumpus else "pit"
+            print(f"You died at {self.current_room} because of {reason}")
 
         if (
             self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
@@ -378,8 +377,12 @@ class Agent:
 
     def check_safe(self, room):
         check_wumpus = Atomic(f"W{room.x},{room.y}")
+        check_pit = Atomic(f"P{room.x},{room.y}")
 
-        if self.kb.resolution(Not(check_wumpus)) == True:
+        if (
+            self.kb.resolution(Not(check_wumpus)) == True
+            and self.kb.resolution(Not(check_pit)) == True
+        ):
             return True
 
         return False
@@ -394,7 +397,7 @@ class Agent:
 
         while self.alive:
             # if show_room:
-            #     print(f"Current room: {self.current_room} - {self.current_room.parent}")
+            # print(f"Current room: {self.current_room} - {self.current_room.parent}")
 
             i += 1
             if self.alive == False:
@@ -415,12 +418,14 @@ class Agent:
                     if room in self.visited_rooms:
                         continue
 
-                    # if room.pit == True:
-                    #     continue
-
                     if room.wumpus == True:
                         met_wumpus_rooms.add(
-                            (room, tuple(self.frontier), tuple(self.visited_rooms))
+                            (
+                                room,
+                                tuple(self.frontier),
+                                tuple(self.visited_rooms),
+                                tuple(self.kb.sentences),
+                            )
                         )
                         # if len(self.frontier) == 1:
                         #     self.shoot(room)
@@ -441,11 +446,6 @@ class Agent:
                 copy_frontier.extend(self.frontier)  # để dùng cho locate gold
 
                 self.exit_cave(moves, show_room)
-                # moves = self.moves_trace(moves)
-                # for room in moves:
-                #     print(
-                #         f"Move to {room[0]} (Parent: {room[0].parent}) {room[1] if room[1] is not None else ''}"
-                #     )
                 break
 
             prev = self.current_room  # phòng hiện tại (chuẩn bị là thành phòng trước)
@@ -454,8 +454,6 @@ class Agent:
 
                 if common_parent is None:
                     common_parent = self.common_parent(next_room.parent, prev)
-
-                # print(f"Common parent: {common_parent}, from {prev} to {next_room}")
 
                 # đi từ prev về common parent
                 prev_room = copy.copy(prev)
@@ -500,13 +498,13 @@ class Agent:
         self.visited_rooms.extend(copy_visited_rooms)
         self.frontier.extend(copy_frontier)
 
-        for wumpus in met_wumpus_rooms:
-            room, frontier, visited_rooms = wumpus
-            wumpus_analyse = self.analyse_wumpus(room, frontier, visited_rooms)
-            points = wumpus_analyse[0]
-            if points > self.points and points != math.inf:
-                self.points = points
-                moves = wumpus_analyse[1]
+        # for wumpus in met_wumpus_rooms:
+        #     room, frontier, visited_rooms, kb = wumpus
+        #     wumpus_analyse = self.analyse_wumpus(room, frontier, visited_rooms, kb)
+        #     points = wumpus_analyse[0]
+        #     if points > self.points and points != math.inf:
+        #         self.points = points
+        #         moves = wumpus_analyse[1]
 
         return (self.points, moves)
 
@@ -516,16 +514,15 @@ class Agent:
 
         self.visited_rooms.clear()
         self.frontier.clear()
+        self.safe_rooms.clear()
 
         self.move_to(self.current_room)
         self.find_safe()
 
-        if show_room:
-            print("Finding cave exit...")
+        print("Finding cave exit...")
 
-        while current_room is None or not (current_room.x == 0 and current_room.y == 0):
-            # if show_room:
-            #     print(f"Current room: {current_room} - {current_room.parent}")
+        while not (current_room.x == 0 and current_room.y == 0):
+            print(f"Current room: {current_room} - {current_room.parent}")
             if current_room is not None:
                 self.points -= 10
             next_room = None
@@ -556,7 +553,7 @@ class Agent:
                     break
 
                 if self.frontier[index_pop].pit == True:
-                    index_pop += 1
+                    self.frontier.pop(index_pop)
                     continue
 
                 if self.frontier[index_pop].wumpus == True:  # chỉ nên shoot khi len = 1
@@ -564,18 +561,21 @@ class Agent:
                         self.shoot(self.frontier[index_pop])
                         shot_wumpus = True
                     else:
-                        while (
-                            index_pop < len(self.frontier)
-                            and self.frontier[index_pop].wumpus == True
+                        last_no_pit = index_pop
+                        while index_pop < len(self.frontier) and (
+                            self.frontier[index_pop].wumpus == True
+                            or self.frontier[index_pop].pit == True
                         ):
+                            if self.frontier[index_pop].pit == False:
+                                last_no_pit = index_pop
                             index_pop += 1
 
                         if index_pop >= len(self.frontier):
+                            index_pop = last_no_pit
                             self.shoot(
-                                self.frontier[index_pop - 1]
+                                self.frontier[index_pop]
                             )  # shoot last available room
                             shot_wumpus = True
-                            break
 
                 if next_room is None:
                     next_room = self.frontier.pop(index_pop)
@@ -597,28 +597,29 @@ class Agent:
             moves.append((current_room, move_to))
 
         self.points += 10  # exit cave
-
-        if show_room:
-            print(f"Exit cave successfully")
+        print(f"Exit cave successfully")
 
         return current_room
 
-    def analyse_wumpus(self, wumpus_room, frontier, visited_rooms):
+    def analyse_wumpus(self, wumpus_room, frontier, visited_rooms, copy_kb):
         golds = self.locate_gold(wumpus_room)
 
         if len(golds) == 0:
             return (math.inf, None)
 
-        # nếu có gold
-        print(f"Other gold found at {wumpus_room}")
         copy_agent = copy.copy(self)
-        copy_agent.shoot(wumpus_room)
-        copy_agent.move_to(wumpus_room)
+        copy_agent.kb.sentences.extend(copy_kb)
+
+        print(f"From {wumpus_room} to {golds[0]}")
+
         copy_agent.frontier.clear()
         copy_agent.frontier.extend(frontier)
         copy_agent.visited_rooms.clear()
         copy_agent.visited_rooms.extend(visited_rooms)
         copy_agent.safe_rooms.clear()
+
+        copy_agent.shoot(wumpus_room)
+        copy_agent.move_to(wumpus_room)
 
         solve = copy_agent.solve(show_room=False)
         return solve
@@ -647,8 +648,8 @@ class Agent:
 
 
 map = Map()
-agent = map.random_map()
-# agent = map.read_map("map5.txt")
+# agent = map.random_map()
+agent = map.read_map("map2.txt")
 if agent is not None:
     solve = agent.solve()
     print(f"Points: {solve[0]}")
