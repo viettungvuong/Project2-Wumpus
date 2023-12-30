@@ -277,7 +277,7 @@ class Agent:
                     for r in map.get_room(x, y).surrounding_rooms
                 )
 
-                self.kb.add_sentence(Not(Atomic(f"W{x},{y}")))
+                # self.kb.add_sentence(Not(Atomic(f"W{x},{y}")))
                 # self.kb.add_sentence(
                 #     Not(Atomic(f"S{r[0]},{r[1]}"))
                 #     for r in map.get_room(x, y).surrounding_rooms
@@ -345,8 +345,6 @@ class Agent:
                 considering_room not in self.visited_rooms
                 and considering_room not in self.frontier
             ):
-                check_pit = Atomic(f"P{considering_room.x},{considering_room.y}")
-
                 if considering_room.pit == False:
                     considering_room.parent = current_room
                     self.frontier.append(considering_room)
@@ -420,19 +418,20 @@ class Agent:
                         continue
 
                     if room.wumpus == True:
-                        met_wumpus_rooms.add(
-                            (
-                                room,
-                                self.points,
-                                tuple(self.frontier.copy()),
-                                tuple(self.visited_rooms.copy()),
-                                tuple(self.kb.sentences.copy()),
-                                tuple(moves.copy()),
+                        print(str(room))
+                        print([str(r[0]) for r in met_wumpus_rooms])
+                        if room not in [r[0] for r in met_wumpus_rooms]:
+                            met_wumpus_rooms.add(
+                                (
+                                    room,
+                                    self.points,
+                                    tuple(self.frontier.copy()),
+                                    tuple(self.visited_rooms.copy()),
+                                    tuple(self.kb.sentences.copy()),
+                                    tuple(moves.copy()),
+                                )
                             )
-                        )
                         continue
-                    else:
-                        self.kb.add_sentence(Not(Atomic(f"W{r[0]},{r[1]}")))
 
                     next_room = room
                     self.frontier.pop(i)
@@ -445,7 +444,7 @@ class Agent:
                 copy_frontier.extend(self.frontier)  # để dùng cho locate gold
 
                 self.exit_cave(moves)
-                print(moves[-1])
+                # print(moves[-1])
                 break
 
             # trace đường đi
@@ -499,21 +498,16 @@ class Agent:
         self.visited_rooms.extend(copy_visited_rooms)
         self.frontier.extend(copy_frontier)
 
-        print(moves[-1])
-
         for wumpus in met_wumpus_rooms:
             room, points, frontier, visited_rooms, kb, saved_moves = wumpus
             wumpus_analyse = self.analyse_wumpus(
                 room, points, frontier, visited_rooms, kb, saved_moves
             )
             points = wumpus_analyse[0]
-            print(moves[-1])
             if points > self.points and points != math.inf:
                 self.points = points
                 moves = wumpus_analyse[1]
-            print(moves[-1])
 
-        print(moves[-1])
         return (self.points, moves)
 
     def exit_cave(self, moves):
@@ -530,7 +524,7 @@ class Agent:
         print("Finding cave exit...")
 
         while not (current_room.x == 0 and current_room.y == 0):
-            print(f"Current room: {current_room} - {current_room.parent}")
+            # print(f"Current room: {current_room} - {current_room.parent}")
             if current_room is not None:
                 self.points -= 10
             next_room = None
@@ -590,9 +584,9 @@ class Agent:
 
             current_room = next_room
             self.move_to(current_room)
-            print(f"Current room: {current_room} - {current_room.parent}")
+            # print(f"Current room: {current_room} - {current_room.parent}")
             moves.append(current_room)
-            print(moves[-1])
+            # print(moves[-1])
 
         self.points += 10  # exit cave
         print(f"Exit cave successfully")
@@ -600,17 +594,15 @@ class Agent:
         return current_room
 
     def analyse_wumpus(self, wumpus_room, points, frontier, visited_rooms, kb, moves):
-        golds = self.locate_gold(wumpus_room)
+        gold = self.locate_gold(wumpus_room)
 
-        if len(golds) == 0:
+        if gold == False:
             return (math.inf, None)
 
         new_kb = KB()
         new_kb.sentences.extend(kb)
         copy_agent = Agent(wumpus_room, new_kb)
         copy_agent.points = points
-
-        print(f"From {wumpus_room} to {golds[0]}")
 
         copy_agent.frontier.extend(frontier)
         copy_agent.visited_rooms.extend(visited_rooms)
@@ -624,26 +616,27 @@ class Agent:
         visited_rooms.extend(self.visited_rooms)
         frontier.append(starting_room)
 
-        golds = []
+        has_gold = False
 
         while len(frontier) > 0:
             current_room = frontier.pop(-1)
             visited_rooms.append(current_room)
 
             if current_room.gold:
-                golds.append(current_room)
+                has_gold = True
+                break
 
             for r in current_room.surrounding_rooms:
                 room = map.get_room(r[0], r[1])
                 if room not in visited_rooms and room not in frontier:
                     frontier.append(room)
 
-        return golds
+        return has_gold
 
 
 map = Map()
 # agent = map.random_map()
-agent = map.read_map("map5.txt")
+agent = map.read_map("map4.txt")
 if agent is not None:
     solve = agent.solve()
     print(f"Points: {solve[0]}")
