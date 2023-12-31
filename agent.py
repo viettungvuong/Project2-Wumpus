@@ -287,13 +287,12 @@ class Agent:
                 print(f"Nothing happened at ({x}, {y})")
 
     def percept(self):
-        special = None
-
         if self.current_room.wumpus or self.current_room.pit:
             self.points -= 10000
             self.alive = False
             reason = "wumpus" if self.current_room.wumpus else "pit"
             print(f"You died at {self.current_room} because of {reason}")
+            return "Died"
 
         if (
             self.kb.check(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
@@ -303,6 +302,9 @@ class Agent:
             self.points += 1000
             self.achieved_golds += 1
             self.kb.remove(Atomic(f"G{self.current_room.x},{self.current_room.y}"))
+            return "Gold"
+
+        special = None
 
         if (
             self.kb.check(Atomic(f"B{self.current_room.x},{self.current_room.y}"))
@@ -318,6 +320,7 @@ class Agent:
                 else:
                     disjunction = Or(disjunction, Atomic(f"P{r[0]},{r[1]}"))
             self.kb.add_sentence(disjunction)
+            special = "Breeze"
 
         if (
             self.kb.check(Atomic(f"S{self.current_room.x},{self.current_room.y}"))
@@ -333,6 +336,7 @@ class Agent:
                 else:
                     disjunction = Or(disjunction, Atomic(f"W{r[0]},{r[1]}"))
             self.kb.add_sentence(disjunction)
+            special = "Stench"
 
         return special
 
@@ -393,6 +397,7 @@ class Agent:
 
         copy_visited_rooms = []
         copy_frontier = []
+        collected_golds = set()
 
         while self.alive:
             # if show_room:
@@ -489,7 +494,9 @@ class Agent:
                     current = move_back_trace.pop(-1)
                     moves.append(current)
 
-            self.move_to(next_room)
+            sign = self.move_to(next_room)
+            if sign == "Gold":
+                collected_golds.add(next_room)
             moves.append(next_room)
 
         if self.alive == False:
@@ -508,7 +515,7 @@ class Agent:
                 self.points = points
                 moves = wumpus_analyse[1]
 
-        return (self.points, moves)
+        return (self.points, moves, collected_golds)
 
     def exit_cave(self, moves):
         # search from current room to the cave
@@ -635,8 +642,8 @@ class Agent:
 
 
 map = Map()
-# agent = map.random_map()
-agent = map.read_map("map4.txt")
+agent = map.random_map()
+# agent = map.read_map("map1.txt")
 if agent is not None:
     solve = agent.solve()
     print(f"Points: {solve[0]}")
@@ -648,3 +655,5 @@ if agent is not None:
         if prev != room:
             print(f"Move to {room}")
         prev = room
+
+    print(f"Collected golds: {[str(room) for room in solve[2]]}")
