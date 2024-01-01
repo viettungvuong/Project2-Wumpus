@@ -20,6 +20,7 @@ class Map:
     def __init__(self):
         self.map = [[Room(i, j, 0) for j in range(10)] for i in range(10)]
         self.n = 0
+        self.golds = 0
 
     def get_room(self, x, y):
         return self.map[x][y]
@@ -43,7 +44,6 @@ class Map:
 
         count_wumpus = 0
         count_pit = 0
-        count_gold = 0
 
         for i in range(n):
             map_str[i] = ""
@@ -77,6 +77,7 @@ class Map:
                     kb.add_sentence(Not(Atomic(f"P{i},{j}")))
                     kb.add_sentence(Atomic(f"G{i},{j}"))
                     map_str[i] += "G"
+                    self.golds += 1
                 elif choice == 3:  # agent position
                     if has_agent == False:
                         has_agent = True
@@ -126,7 +127,7 @@ class Map:
                     self.map[i][j].pit = True
                     break
 
-        if count_gold == 0:
+        if self.golds == 0:
             while True:
                 (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
                 if map_str[i][j * 2] == "-":
@@ -134,7 +135,7 @@ class Map:
                     map_str[i] = map_str[i][: j * 2] + "G" + map_str[i][j * 2 + 1 :]
                     kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                     kb.add_sentence(Not(Atomic(f"P{i},{j}")))
-                    count_gold += 1
+                    self.golds += 1
                     break
 
         for i in range(n):
@@ -169,6 +170,7 @@ class Map:
 
                         if line_split[j].__contains__("G"):
                             self.map[i][j].gold = True
+                            self.golds += 1
                             kb.add_sentence(Atomic(f"G{i},{j}"))
                             kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                             kb.add_sentence(Not(Atomic(f"P{i},{j}")))
@@ -401,7 +403,7 @@ class Agent:
 
         while self.alive:
             # if show_room:
-            # print(f"Current room: {self.current_room} - {self.current_room.parent}")
+            print(f"Current room: {self.current_room} - {self.current_room.parent}")
 
             i += 1
             if self.alive == False:
@@ -646,7 +648,7 @@ agent = map.random_map()
 # agent = map.read_map("map1.txt")
 if agent is not None:
     solve = agent.solve()
-    print(f"Points: {solve[0]}")
+
     moves = solve[1]
     prev = None
     for room in moves:
@@ -655,5 +657,5 @@ if agent is not None:
         if prev != room:
             print(f"Move to {room}")
         prev = room
-
+    print(f"Points: {solve[0]}")
     print(f"Collected golds: {[str(room) for room in solve[2]]}")
