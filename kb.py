@@ -4,6 +4,7 @@ from logic import Not, And, Or, If, Iff, Atomic, Formula, Operator
 class KB:
     def __init__(self):
         self.sentences = []
+        self.queries = {}
 
     def print(self):
         for s in self.sentences:
@@ -18,7 +19,12 @@ class KB:
                 self.sentences.remove(s)
 
     def check(self, sentence):  # check if sentence is in KB
-        return str(sentence) in [str(s) for s in self.sentences]
+        if str(sentence) in self.queries and self.queries[str(sentence)] == True:
+            return True
+
+        check = str(sentence) in [str(s) for s in self.sentences]
+        self.queries[str(sentence)] = check
+        return check
 
     def toCnf(self):
         result = []
