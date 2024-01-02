@@ -135,6 +135,7 @@ class Map:
                     map_str[i] = map_str[i][: j * 2] + "G" + map_str[i][j * 2 + 1 :]
                     kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                     kb.add_sentence(Not(Atomic(f"P{i},{j}")))
+                    kb.add_sentence(Atomic(f"G{i},{j}"))
                     self.golds += 1
                     break
 
