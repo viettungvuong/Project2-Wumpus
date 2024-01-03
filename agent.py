@@ -517,6 +517,7 @@ class Agent:
             if points > self.points and points != math.inf:
                 self.points = points
                 moves = wumpus_analyse[1]
+                collected_golds = wumpus_analyse[2]
 
         return (self.points, moves, collected_golds)
 
@@ -645,8 +646,8 @@ class Agent:
 
 
 map = Map()
-agent = map.random_map()
-# agent = map.read_map("map1.txt")
+# agent = map.random_map()
+agent = map.read_map("map5.txt")
 if agent is not None:
     solve = agent.solve()
 
