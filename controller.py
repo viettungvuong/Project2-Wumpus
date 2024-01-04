@@ -339,11 +339,7 @@ def draw_map(map):
             screen_y = offset_y - y * room_height
             room_element = Room(y, x)  # room[x] in line[y]
             room_element.goto(screen_x+half_room_length, screen_y-half_room_height)
-            room_element.showturtle()   
-            if character == "A":
-                player = Player()
-                player.goto(screen_x + half_room_length, screen_y - half_room_height)
-                player.showturtle()
+            room_element.showturtle()
 
             if character == "G":
                 room_element.treasure = True
@@ -371,6 +367,17 @@ def draw_map(map):
 
             room_line.append(room_element)
         rooms.append(room_line)  # add line[y] to rooms (rooms is 2-d array)
+
+    for y in range(len(map)):
+        room_line = []
+        for x in range(len(map[y])):
+            character = map[y][x]
+            screen_x = offset - offset_x + x * room_length
+            screen_y = offset_y - y * room_height 
+            if character == "A":
+                player = Player()
+                player.goto(screen_x + half_room_length, screen_y - half_room_height)
+                player.showturtle()
 
     ## add stench true and breeze true for each room
     for y in range(len(map)):
