@@ -278,7 +278,7 @@ class Player(turtle.Turtle):
         b = self.ycor() - target.ycor()
 
         distance = math.sqrt((a**2) + (b**2))
-        if distance < 20:
+        if distance < room_height/2:
             return True
         else:
             return False
@@ -453,23 +453,27 @@ def draw_map(map):
     wn.update()
     
     for move in agent.moves:
-        print(move[0].y,move[0].x)
         player.go_to(offset-offset_x+move[0].x * room_length + room_length/2,offset-offset_y+ move[0].y * room_height + room_height/2)
-        wn.update()
+        if move[1] == 'None':
+            pass
+        elif move[1] == "Shot Wumpus":
+            for wumpus in wumpuses:
+                if player.is_collision(wumpus):
+                    print("collision with wumpus")
+                    wumpuses.remove(wumpus)
+                    wumpus.destroy()
+                    wn.update()
+        elif move[1] == "Gold":
+            for treasure in treasures:
+                if player.is_collision(treasure):
+                    print("collision with treasure")
+                    treasures.remove(treasure)
+                    treasure.destroy()
+                    wn.update()
+            pass
+        
+        wn.update()  
         time.sleep(0.5)
-
-    while True:
-        for pit in pits:
-            if player.is_collision(pit):
-                print("Collision with pit")
-
-        for treasure in treasures:
-            if player.is_collision(treasure):
-                print("Collision with gold")
-                treasures.remove(treasure)
-                treasure.destroy()
-                player.gold += 100
-        wn.update()
 
 wn = turtle.Screen()
 wn.bgcolor("white")
