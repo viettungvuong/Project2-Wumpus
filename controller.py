@@ -135,17 +135,17 @@ resized_img.save(gif_unvisited, "GIF")
 turtle.register_shape(gif_unvisited)
 
 
-# Frontier
-png_frontier = "./asset/frontier.png"
-gif_frontier = "./asset/frontier.gif"
-img = Image.open(png_frontier)
-img.save(gif_frontier, "GIF")
+# Visited
+png_visited = "./asset/visited.png"
+gif_visited = "./asset/visited.gif"
+img = Image.open(png_visited)
+img.save(gif_visited, "GIF")
 # Resize
 new_size = (room_height, room_length)  # Set the new size (width, height)
 resized_img = img.resize(new_size)
 # Save the resized image as a GIF
-resized_img.save(gif_frontier, "GIF")
-turtle.register_shape(gif_frontier)
+resized_img.save(gif_visited, "GIF")
+turtle.register_shape(gif_visited)
 
 ################################################################################
 ################################################################################
@@ -153,7 +153,7 @@ turtle.register_shape(gif_frontier)
 ################################################################################
 
 # room
-class Room:
+class Room(turtle.Turtle):
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -164,8 +164,16 @@ class Room:
         # Khi con wumpus dau tien chet thi cai o ma between 2 con này vẫn co stench chu no ko bien mat
         self.breeze = False
         self.treasure = False
+        self.visited = False
+        turtle.Turtle.__init__(self)
+        self.hideturtle()
+        self.shape(gif_unvisited)
+        self.penup()
+        self.speed(0)
 
-
+    def change_shape(self):
+        self.shape(gif_visited)
+        self.visited=True
 # pit
 class Pit(turtle.Turtle):
     def __init__(self):
@@ -226,35 +234,6 @@ class Wumpus(turtle.Turtle):
     def destroy(self):
         self.goto(2000, 2000)
         self.hideturtle()
-
-
-# unvisited
-class Unvisited(turtle.Turtle):
-    def __init__(self):
-        turtle.Turtle.__init__(self)
-        self.hideturtle()
-        self.shape(gif_unvisited)
-        self.penup()
-        self.speed(0)
-
-    def destroy(self):
-        self.goto(2000, 2000)
-        self.hideturtle()
-
-
-# frontier
-class Frontier(turtle.Turtle):
-    def __init__(self):
-        turtle.Turtle.__init__(self)
-        self.hideturtle()
-        self.shape(gif_frontier)
-        self.penup()
-        self.speed(0)
-
-    def destroy(self):
-        self.goto(2000, 2000)
-        self.hideturtle()
-
 
 # player
 class Player(turtle.Turtle):
@@ -351,20 +330,6 @@ def draw_map(map):
             offset - offset_x + len(map[0]) * room_length, offset_y - i * room_height
         )  # Draw across to right
 
-    # draw frontier and unvisited
-    for room in frontier:
-        screen_x = offset - offset_x + room.x * room_length + room_length / 2
-        screen_y = offset_y - room.y * room_height - room_height / 2
-        frontier_room = Frontier()
-        frontier_room.goto(screen_x, screen_y)
-        frontier_room.showturtle()
-    for room in unvisited:
-        screen_x = offset - offset_x + room.x * room_length + room_length / 2
-        screen_y = offset_y - room.y * room_height - room_height / 2
-        unvisited_room = Unvisited()
-        unvisited_room.goto(screen_x, screen_y)
-        unvisited_room.showturtle()
-
     # Set image for agent, gold, pit, wumpus
     for y in range(len(map)):
         room_line = []  # line 1,2,3,4 ....
@@ -373,8 +338,10 @@ def draw_map(map):
             screen_x = offset - offset_x + x * room_length
             screen_y = offset_y - y * room_height
             room_element = Room(y, x)  # room[x] in line[y]
-
+            room_element.goto(screen_x+half_room_length, screen_y-half_room_height)
+            room_element.showturtle()   
             if character == "A":
+                player = Player()
                 player.goto(screen_x + half_room_length, screen_y - half_room_height)
                 player.showturtle()
 
@@ -466,8 +433,15 @@ def draw_map(map):
                 if player.is_collision(treasure):
                     treasures.remove(treasure)
                     treasure.destroy()
+        for room_line in rooms:
+            for room in room_line:
+                if room.visited == False and room.x==move[0].x and room.y==move[0].y:
+                    room.change_shape()
         
-        wn.update()  
+        player.showturtle()
+
+
+        wn.update()
         time.sleep(0.5)
 
 wn = turtle.Screen()
@@ -479,19 +453,13 @@ t = turtle.Turtle()
 map = read_file("map5.txt")
 
 ##create instances
-player = Player()
+player = None
 pits = []
 rooms = []
 treasures = []
 breezes = []
 stenches = []
 wumpuses = []
-
-# thuat toan se luu state vao trong unvisted va frontier r draw ra
-unvisited = []
-frontier = []
-
-
 
 # Draw the map
 draw_map(map)
