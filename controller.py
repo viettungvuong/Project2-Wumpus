@@ -452,9 +452,9 @@ def draw_map(map):
 
     wn.update()
     
-    for room in agent.moves:
-        print(room.y,room.x)
-        player.go_to(offset-offset_x+room.x * room_length + room_length/2,offset-offset_y+ room.y * room_height + room_height/2)
+    for move in agent.moves:
+        print(move[0].y,move[0].x)
+        player.go_to(offset-offset_x+move[0].x * room_length + room_length/2,offset-offset_y+ move[0].y * room_height + room_height/2)
         wn.update()
         time.sleep(0.5)
 
