@@ -459,18 +459,13 @@ def draw_map(map):
         elif move[1] == "Shot Wumpus":
             for wumpus in wumpuses:
                 if player.is_collision(wumpus):
-                    print("collision with wumpus")
                     wumpuses.remove(wumpus)
                     wumpus.destroy()
-                    wn.update()
         elif move[1] == "Gold":
             for treasure in treasures:
                 if player.is_collision(treasure):
-                    print("collision with treasure")
                     treasures.remove(treasure)
                     treasure.destroy()
-                    wn.update()
-            pass
         
         wn.update()  
         time.sleep(0.5)
