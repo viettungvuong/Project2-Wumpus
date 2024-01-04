@@ -390,12 +390,15 @@ class Agent:
 
         return False
 
-    def solve(self, moves=None):
+    def solve(self, moves=None, wumpus=True):
         i = 0
         if moves is None:
-            moves = [self.current_room]
+            moves = [(self.current_room, "Start")]
         else:
-            moves.append(self.current_room)
+            if wumpus == False:
+                moves.append((self.current_room, None))
+            else:
+                moves.append((self.current_room, "Shot Wumpus"))
         met_wumpus_rooms = set()
 
         copy_visited_rooms = []
@@ -467,9 +470,7 @@ class Agent:
                 current = prev.parent
 
                 while True:
-                    # if show_room and current is not None:
-                    #     print(f"Current room: {current} - Back")
-                    moves.append(current)
+                    moves.append((current, None))
 
                     if current == common_parent:
                         break
@@ -495,12 +496,17 @@ class Agent:
 
                 while len(move_back_trace) > 0:
                     current = move_back_trace.pop(-1)
-                    moves.append(current)
+                    moves.append((current, None))
 
             sign = self.move_to(next_room)
+
+            special = None
+
             if sign == "Gold":
                 collected_golds.add(next_room)
-            moves.append(next_room)
+                special = "Gold"
+
+            moves.append((next_room, special))
 
         if self.alive == False:
             return (-math.inf, None)
@@ -539,6 +545,9 @@ class Agent:
             if current_room is not None:
                 self.points -= 10
             next_room = None
+
+            shot_wumpus = False
+            special = None
 
             if len(self.safe_rooms) > 0:
                 self.safe_rooms = sorted(
@@ -595,8 +604,11 @@ class Agent:
 
             current_room = next_room
             self.move_to(current_room)
+
+            if shot_wumpus:
+                special = "Shot Wumpus"
             # print(f"Current room: {current_room} - {current_room.parent}")
-            moves.append(current_room)
+            moves.append((current_room, special))
             # print(moves[-1])
 
         self.points += 10  # exit cave
@@ -618,7 +630,7 @@ class Agent:
         copy_agent.frontier.extend(frontier)
         copy_agent.visited_rooms.extend(visited_rooms)
 
-        solve = copy_agent.solve(moves=list(moves))
+        solve = copy_agent.solve(moves=list(moves), wumpus=True)
         return solve
 
     def locate_gold(self, starting_room):
@@ -657,7 +669,7 @@ if agent is not None:
         if room is None:
             continue
         if prev != room:
-            print(f"Move to {room}")
+            print(f"Move to {str(room[0])} - {room[1]}")
         prev = room
     print(f"Points: {solve[0]}")
     print(f"Collected golds: {[str(room) for room in solve[2]]}")
