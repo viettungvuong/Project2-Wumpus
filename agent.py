@@ -651,6 +651,7 @@ agent = map.read_map("map5.txt")
 if agent is not None:
     solve = agent.solve()
 
+    global moves
     moves = solve[1]
     prev = None
     for room in moves:
