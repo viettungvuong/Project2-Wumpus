@@ -80,6 +80,7 @@ class Map:
                     self.golds += 1
                 elif choice == 3:  # agent position
                     if has_agent == False:
+                        self.map[i][j].agent=True
                         has_agent = True
                         map_str[i] += "A"
                         kb.add_sentence(Not(Atomic(f"W{i},{j}")))
@@ -98,6 +99,7 @@ class Map:
                 (i, j) = (random.randint(0, n - 1), random.randint(0, n - 1))
                 if map_str[i][j * 2] == "-":
                     if kb.check(Atomic(f"G{i},{j}")) == False:
+                        self.map[i][j].agent=True
                         map_str[i] = map_str[i][: j * 2] + "A" + map_str[i][j * 2 + 1 :]
                         kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                         kb.add_sentence(Not(Atomic(f"P{i},{j}")))
@@ -120,6 +122,7 @@ class Map:
             while True:
                 (i, j) = (random.randint(1, n - 1), random.randint(1, n - 1))
                 if map_str[i][j * 2] == "-":
+                    self.map[i][j].agent = True
                     map_str[i] = map_str[i][: j * 2] + "P" + map_str[i][j * 2 + 1 :]
                     for move in self.map[i][j].surrounding_rooms:
                         kb.add_sentence(Atomic(f"B{move[0]},{move[1]}"))
@@ -165,6 +168,7 @@ class Map:
 
                     for j in range(n):
                         if line_split[j].__contains__("A"):
+                            self.map[i][j].agent= True
                             kb.add_sentence(Not(Atomic(f"W{i},{j}")))
                             kb.add_sentence(Not(Atomic(f"P{i},{j}")))
                             agent_pos = (i, j)
@@ -658,7 +662,7 @@ class Agent:
 
 
 map = Map()
-# agent = map.random_map()
+#agent = map.random_map()
 agent = map.read_map("map5.txt")
 if agent is not None:
     solve = agent.solve()

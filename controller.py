@@ -457,8 +457,25 @@ wn.title("A maze game")
 wn.setup(1.0, 1.0)         
 turtle.screensize(canvwidth=turtle.window_width(), canvheight=turtle.window_height())
 t = turtle.Turtle()
-map = read_file("map5.txt")
 
+# get agent random map
+map = []
+for row in agent.map.map:
+    line = ""
+    for room in row:
+        if room.wumpus == True:
+            line += "W"
+        elif room.pit == True:
+            line += "P"
+        elif room.gold == True:
+            line += "G"
+        elif room.agent == True:
+            line += "A"
+        else:
+            line += "-"
+    map.append(line)
+print(map)
+    
 ##create instances
 player = None
 pits = []

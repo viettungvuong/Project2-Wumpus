@@ -10,6 +10,7 @@ class Room:
         self.wumpus = False
         self.pit = False
         self.gold = False
+        self.agent= False
 
         self.parent = None
 
