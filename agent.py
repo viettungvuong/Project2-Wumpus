@@ -675,6 +675,15 @@ if agent is not None:
             continue
         if prev != room:
             print(f"Move to {str(room[0])} - {room[1]}")
+            current = room[0]
+            if agent.kb.check(Atomic(f"P{current.x},{current.y}")) == True:
+                        print(f"Percept: Breeze - Possible pit at {[str(r) for r in current.surrounding_rooms]}")
+            elif agent.kb.check(Atomic(f"S{current.x},{current.y}")) == True:
+                        print(f"Percept: Stench - Possible wumpus at {[str(r) for r in current.surrounding_rooms]}")
+            elif agent.kb.check(Not(Atomic(f"P{current.x},{current.y}"))) == True:
+                        print(f"Percept: No breeze - No pit at {[str(r) for r in current.surrounding_rooms]}")
+            elif agent.kb.check(Not(Atomic(f"S{current.x},{current.y}"))) == True:
+                        print(f"Percept: No stench - No wumpus at {[str(r) for r in current.surrounding_rooms]}")
         prev = room
     print(f"Points: {solve[0]}")
     print(f"Collected golds: {[str(room) for room in solve[2]]}")
