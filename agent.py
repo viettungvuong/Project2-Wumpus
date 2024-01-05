@@ -30,7 +30,7 @@ class Map:
         return abs(current_room.x - goal_room.x) + abs(current_room.y - goal_room.y)
 
     def random_map(self):
-        n = random.randint(3, 10)
+        n = random.randint(3, 7)
         self.n = n
         self.map = [[Room(i, j, n) for j in range(n)] for i in range(n)]
 
@@ -662,8 +662,8 @@ class Agent:
 
 
 map = Map()
-#agent = map.random_map()
-agent = map.read_map("map5.txt")
+agent = map.random_map()
+#agent = map.read_map("map5.txt")
 if agent is not None:
     solve = agent.solve()
 
